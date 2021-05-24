@@ -1,0 +1,466 @@
+---
+title: "irrigation-productivity-trends"
+author: "Britta Schumacher"
+date: "5/24/2021"
+output: 
+  html_document:
+    theme: flatly
+    toc: yes
+    toc_float: true
+    code_folding: hide
+---
+
+Bring in packages & data built in step 11, build-panels-for-analysis.Rmd
+```{r message = F, warning = F}
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(RColorBrewer)
+library(gridExtra)
+library(ggpubr)
+library(knitr)
+```
+
+# Trends 
+
+**DATA**: sumstat_indyrs.RDS and western_ctys.RDS
+
+Let's show trends in Estimated Average Yield, Water Use, and Irrigation Productivity over time. These trends are built from the sum_stat_indyrs_X.RDS datasets and are built as line graphs, facetted by state. I am STILL using the same *key variables* (yield, water use).
+
+1) Pull in datasets (again!) selecting only those county-year-crop combinations that show up across all four FRIS years. We will then merge these datasets (have only GEOID as a county identifier) with a distinct() version of the FRIS (has COUNTY_ALPHA, STATE_ABBR). This ensures that we have a "County, State Abbreviation" column to use in our visualizations, below.;
+2) I then build two functions for irrigation productivity. I had to do this because my functions were failing to accept new parameters. The first function builds out a line graph  by crop-county-year by state for each metric; the third function builds out by crop-county-year but not by state. I use the third and fourth function to build line graphs for crops that have too few observations to warrant visualization by state.;
+
+These functions take the arguments:
+
+function(data_frame, "CROP", "STATE AABREVIATION", "TITLE--always blank", "Y Axis Label", "./file_path/file_name.png")
+
+Visualizations are sent to crop-specific folders within variable specific trend folders and are built for both metric and US (same graph, different scale) measurements.
+
+Below is a whole lot of code, but its all doing the same exact action on different datasets and different variables and spitting out the results into nested crop-specific and variable-specific folders! Everything below works on estimated average, summarised data--NO raw data is visualized. We are trying to get a sense here of how these different variables change and vary spatially and temporally.
+
+```{r}
+# Build line graph over time using the _indyrs datasets (to show trends over time)
+library(RColorBrewer)
+fris_sp_indyrs <- readRDS("./data/sumstat_indyrs.RDS")
+
+# find counties in both datasets that have data across all four years of the fris for different crops
+trends_fris <- fris_sp_indyrs %>% 
+  mutate(count = 1) %>% 
+  group_by(GEOID, CROP) %>% 
+  summarise(count_yrs = sum(count)) %>% 
+  filter(count_yrs == 4) 
+
+# We will use the above as a key to pull data from fris_sp_indyrs and fris5_sp_indyrs, keeping only those county-crop combinations where there are observations in all four years
+trends_fris <- merge(trends_fris, fris_sp_indyrs, by = c("GEOID", "CROP"))
+
+# the dataframes above have only county-crop combinations where there is an observation in each year.
+# let's merge them with our full-panel-FRIS.RDS to build in a county name identifier
+cty_names <- readRDS("./data/cty_names.RDS")
+ctys <- readRDS("./data/western_ctys.RDS")
+ctys_df <- as.data.frame(ctys)
+
+ctys_df <- merge(cty_names, ctys_df)
+
+fris_names <- ctys_df %>% 
+  select(GEOID, COUNTY_ALPHA, STATE_ABBR) %>% 
+  distinct() 
+
+fris_names <- transform(fris_names, County = paste(COUNTY_ALPHA, STATE_ABBR, sep= ", "))
+
+trends_fris <- merge(trends_fris, fris_names, by = "GEOID")
+
+# build line graph by crop-county BY STATE
+build_trends <- function(df, crop, abbr, var, ylab) {
+  
+  x <- df %>% 
+    filter(CROP == crop) %>% 
+    filter(STATE_ABBR == abbr)
+
+  var <- enquo(var)
+  
+  crop_trends <- ggplot(x, aes(x = YEAR, y = !! var)) +
+    geom_point(size = 3, aes(color = County)) +
+    geom_line(aes(color = County)) +
+    scale_color_brewer(palette = "Paired") +
+    #guides(col=guide_legend(ncol=2)) +
+    xlab("Year") +
+    ylab(ylab) +
+    scale_x_continuous(breaks = seq(2003, 2018, by = 5)) +
+    theme_classic()
+
+  #ggsave(place, width=6, height=4,dpi=300, units="in", device='png')
+  
+  return(crop_trends)
+
+}
+
+# build line graph by crop-county BY STATE (NO PALLETE + 2 column legend)
+build_trendsa <- function(df, crop, abbr, var, ylab) {
+  
+  x <- df %>% 
+    filter(CROP == crop) %>% 
+    filter(STATE_ABBR == abbr)
+
+  var <- enquo(var)
+  
+  crop_trends <- ggplot(x, aes(x = YEAR, y = !! var)) +
+    geom_point(size = 3, aes(color = County)) +
+    geom_line(aes(color = County)) +
+    #scale_color_brewer(palette = "Paired") +
+    guides(col=guide_legend(ncol=2)) +
+    xlab("Year") +
+    ylab(ylab) +
+    scale_x_continuous(breaks = seq(2003, 2018, by = 5)) +
+    theme_classic()
+
+  #ggsave(place, width=6, height=4,dpi=300, units="in", device='png')
+  
+  return(crop_trends)
+
+}
+
+```
+
+# Irrigation - metric (kilograms/cubic meter)
+
+```{r}
+
+######## ALFALFA
+build_trends(trends_fris, "ALFALFA", "AZ", EST_IP_KG_M, "Irrigation Productivity (kilograms/cubic meter)")
+build_trends(trends_fris, "ALFALFA", "CA", EST_IP_KG_M, "Irrigation Productivity (kilograms/cubic meter)")
+build_trends(trends_fris, "ALFALFA", "CO",EST_IP_KG_M,"Irrigation Productivity (kilograms/cubic meter)")
+build_trendsa(trends_fris, "ALFALFA", "ID",EST_IP_KG_M,"Irrigation Productivity (kilograms/cubic meter)") ## too many counties for palette, use alternate function 
+build_trends(trends_fris, "ALFALFA", "MT",EST_IP_KG_M,"Irrigation Productivity (kilograms/cubic meter)") 
+build_trends(trends_fris, "ALFALFA", "NV",EST_IP_KG_M,"Irrigation Productivity (kilograms/cubic meter)")
+build_trends(trends_fris, "ALFALFA", "NM",EST_IP_KG_M,"Irrigation Productivity (kilograms/cubic meter)")
+build_trends(trends_fris, "ALFALFA", "OR",EST_IP_KG_M, "Irrigation Productivity (kilograms/cubic meter)")
+build_trendsa(trends_fris, "ALFALFA", "UT",EST_IP_KG_M,"Irrigation Productivity (kilograms/cubic meter)") ## too many counties for palette, use alternate function 
+build_trends(trends_fris, "ALFALFA", "WA",EST_IP_KG_M,"Irrigation Productivity (kilograms/cubic meter)")
+
+######## HAY
+build_trends(trends_fris, "OTHER_HAY", "AZ", EST_IP_KG_M,"Irrigation Productivity (kilograms/cubic meter)")
+build_trends(trends_fris, "OTHER_HAY", "CA", EST_IP_KG_M,"Irrigation Productivity (kilograms/cubic meter)")
+build_trends(trends_fris, "OTHER_HAY", "CO", EST_IP_KG_M,"Irrigation Productivity (kilograms/cubic meter)")
+build_trends(trends_fris, "OTHER_HAY", "MT", EST_IP_KG_M,"Irrigation Productivity (kilograms/cubic meter)")
+build_trends(trends_fris, "OTHER_HAY", "NV", EST_IP_KG_M, "Irrigation Productivity (kilograms/cubic meter)")
+build_trends(trends_fris, "OTHER_HAY", "OR", EST_IP_KG_M, "Irrigation Productivity (kilograms/cubic meter)")
+build_trends(trends_fris, "OTHER_HAY", "UT", EST_IP_KG_M, "Irrigation Productivity (kilograms/cubic meter)")
+build_trends(trends_fris, "OTHER_HAY", "WA", EST_IP_KG_M, "Irrigation Productivity (kilograms/cubic meter)")
+
+##### WHEAT
+build_trends(trends_fris, "WHEAT", "AZ",EST_IP_KG_M, "Irrigation Productivity (kilograms/cubic meter)")
+build_trends(trends_fris, "WHEAT", "CA",EST_IP_KG_M, "Irrigation Productivity (kilograms/cubic meter)")
+build_trends(trends_fris, "WHEAT", "CO",EST_IP_KG_M, "Irrigation Productivity (kilograms/cubic meter)")
+build_trends(trends_fris, "WHEAT", "ID",EST_IP_KG_M, "Irrigation Productivity (kilograms/cubic meter)") 
+build_trends(trends_fris, "WHEAT", "OR",EST_IP_KG_M, "Irrigation Productivity (kilograms/cubic meter)")
+build_trends(trends_fris, "WHEAT", "UT",EST_IP_KG_M, "Irrigation Productivity (kilograms/cubic meter)") 
+build_trends(trends_fris, "WHEAT", "WA",EST_IP_KG_M,"Irrigation Productivity (kilograms/cubic meter)")
+
+
+##### Corn Grain
+build_trends(trends_fris, "CORN_GRAIN", "CA", EST_IP_KG_M, "Irrigation Productivity (kilograms/cubic meter)")
+build_trends(trends_fris, "CORN_GRAIN", "CO", EST_IP_KG_M, "Irrigation Productivity (kilograms/cubic meter)")
+build_trends(trends_fris, "CORN_GRAIN", "ID", EST_IP_KG_M, "Irrigation Productivity (kilograms/cubic meter)") 
+build_trends(trends_fris, "CORN_GRAIN", "OR", EST_IP_KG_M, "Irrigation Productivity (kilograms/cubic meter)")
+build_trends(trends_fris, "CORN_GRAIN", "WA", EST_IP_KG_M, "Irrigation Productivity (kilograms/cubic meter)")
+
+##### Corn Silage
+build_trends(trends_fris, "CORN_SILAGE", "AZ", EST_IP_KG_M, "Irrigation Productivity (kilograms/cubic meter)")
+build_trends(trends_fris, "CORN_SILAGE", "CA", EST_IP_KG_M, "Irrigation Productivity (kilograms/cubic meter)")
+build_trends(trends_fris, "CORN_SILAGE", "CO", EST_IP_KG_M, "Irrigation Productivity (kilograms/cubic meter)")
+build_trends(trends_fris, "CORN_SILAGE", "ID", EST_IP_KG_M, "Irrigation Productivity (kilograms/cubic meter)") 
+build_trends(trends_fris, "CORN_SILAGE", "NM", EST_IP_KG_M,"Irrigation Productivity (kilograms/cubic meter)")
+build_trends(trends_fris, "CORN_SILAGE", "OR", EST_IP_KG_M, "Irrigation Productivity (kilograms/cubic meter)")
+build_trends(trends_fris, "CORN_SILAGE", "UT", EST_IP_KG_M, "Irrigation Productivity (kilograms/cubic meter)") 
+build_trends(trends_fris, "CORN_SILAGE", "WA", EST_IP_KG_M, "Irrigation Productivity (kilograms/cubic meter)")
+
+
+```
+
+# Irrigation productivity - US (pounds/acre foot)
+
+```{r}
+####################################################################################################################
+####### Irrigation Productivity (US)
+####################################################################################################################
+######## ALFALFA
+build_trends(trends_fris, "ALFALFA", "AZ", EST_IP_LBS_AF, "Irrigation Productivity (pounds/acre foot)")
+build_trends(trends_fris, "ALFALFA", "CA", EST_IP_LBS_AF, "Irrigation Productivity (pounds/acre foot)")
+build_trends(trends_fris, "ALFALFA", "CO", EST_IP_LBS_AF, "Irrigation Productivity (pounds/acre foot)")
+build_trendsa(trends_fris, "ALFALFA", "ID", EST_IP_LBS_AF, "Irrigation Productivity (pounds/acre foot)") ## too many counties for palette, use alternate function 
+build_trends(trends_fris, "ALFALFA", "MT", EST_IP_LBS_AF, "Irrigation Productivity (pounds/acre foot)") 
+build_trends(trends_fris, "ALFALFA", "NV", EST_IP_LBS_AF, "Irrigation Productivity (pounds/acre foot)")
+build_trends(trends_fris, "ALFALFA", "NM", EST_IP_LBS_AF, "Irrigation Productivity (pounds/acre foot)")
+build_trends(trends_fris, "ALFALFA", "OR", EST_IP_LBS_AF, "Irrigation Productivity (pounds/acre foot)")
+build_trendsa(trends_fris, "ALFALFA", "UT", EST_IP_LBS_AF, "Irrigation Productivity (pounds/acre foot)") ## too many counties for palette, use alternate function 
+build_trends(trends_fris, "ALFALFA", "WA", EST_IP_LBS_AF, "Irrigation Productivity (pounds/acre foot)")
+
+######## HAY
+build_trends(trends_fris, "OTHER_HAY", "AZ", EST_IP_LBS_AF,"Irrigation Productivity (pounds/acre foot)")
+build_trends(trends_fris, "OTHER_HAY", "CA", EST_IP_LBS_AF,"Irrigation Productivity (pounds/acre foot)")
+build_trends(trends_fris, "OTHER_HAY", "CO", EST_IP_LBS_AF,"Irrigation Productivity (pounds/acre foot)")
+build_trends(trends_fris, "OTHER_HAY", "MT", EST_IP_LBS_AF,"Irrigation Productivity (pounds/acre foot)")
+build_trends(trends_fris, "OTHER_HAY", "NV", EST_IP_LBS_AF, "Irrigation Productivity (pounds/acre foot)")
+build_trends(trends_fris, "OTHER_HAY", "OR", EST_IP_LBS_AF, "Irrigation Productivity (pounds/acre foot)")
+build_trends(trends_fris, "OTHER_HAY", "UT", EST_IP_LBS_AF, "Irrigation Productivity (pounds/acre foot)")
+build_trends(trends_fris, "OTHER_HAY", "WA", EST_IP_LBS_AF, "Irrigation Productivity (pounds/acre foot)")
+
+##### WHEAT
+build_trends(trends_fris, "WHEAT", "AZ",EST_IP_LBS_AF, "Irrigation Productivity (pounds/acre foot)")
+build_trends(trends_fris, "WHEAT", "CA",EST_IP_LBS_AF, "Irrigation Productivity (pounds/acre foot)")
+build_trends(trends_fris, "WHEAT", "CO",EST_IP_LBS_AF, "Irrigation Productivity (pounds/acre foot)")
+build_trends(trends_fris, "WHEAT", "ID",EST_IP_LBS_AF, "Irrigation Productivity (pounds/acre foot)") 
+build_trends(trends_fris, "WHEAT", "OR",EST_IP_LBS_AF, "Irrigation Productivity (pounds/acre foot)")
+build_trends(trends_fris, "WHEAT", "UT",EST_IP_LBS_AF, "Irrigation Productivity (pounds/acre foot)") 
+build_trends(trends_fris, "WHEAT", "WA",EST_IP_LBS_AF,"Irrigation Productivity (pounds/acre foot)")
+
+
+##### Corn Grain
+build_trends(trends_fris, "CORN_GRAIN", "CA", EST_IP_LBS_AF, "Irrigation Productivity (pounds/acre foot)")
+build_trends(trends_fris, "CORN_GRAIN", "CO", EST_IP_LBS_AF, "Irrigation Productivity (pounds/acre foot)")
+build_trends(trends_fris, "CORN_GRAIN", "ID", EST_IP_LBS_AF, "Irrigation Productivity (pounds/acre foot)") 
+build_trends(trends_fris, "CORN_GRAIN", "OR", EST_IP_LBS_AF, "Irrigation Productivity (pounds/acre foot)")
+build_trends(trends_fris, "CORN_GRAIN", "WA", EST_IP_LBS_AF, "Irrigation Productivity (pounds/acre foot)")
+
+##### Corn Silage
+build_trends(trends_fris, "CORN_SILAGE", "AZ", EST_IP_LBS_AF, "Irrigation Productivity (pounds/acre foot)")
+build_trends(trends_fris, "CORN_SILAGE", "CA", EST_IP_LBS_AF, "Irrigation Productivity (pounds/acre foot)")
+build_trends(trends_fris, "CORN_SILAGE", "CO", EST_IP_LBS_AF, "Irrigation Productivity (pounds/acre foot)")
+build_trends(trends_fris, "CORN_SILAGE", "ID", EST_IP_LBS_AF, "Irrigation Productivity (pounds/acre foot)") 
+build_trends(trends_fris, "CORN_SILAGE", "NM", EST_IP_LBS_AF,"Irrigation Productivity (pounds/acre foot)")
+build_trends(trends_fris, "CORN_SILAGE", "OR", EST_IP_LBS_AF, "Irrigation Productivity (pounds/acre foot)")
+build_trends(trends_fris, "CORN_SILAGE", "UT", EST_IP_LBS_AF, "Irrigation Productivity (pounds/acre foot)") 
+build_trends(trends_fris, "CORN_SILAGE", "WA", EST_IP_LBS_AF, "Irrigation Productivity (pounds/acre foot)")
+```
+
+
+# Yield - metric (kilograms/hectare)
+
+```{r}
+####################################################################################################################
+####### ESTIMATED AVERAGE YIELD (Metric)
+####################################################################################################################
+######## ALFALFA
+build_trends(trends_fris, "ALFALFA", "AZ", EST_AVE_YIELD_KG, "Yield (kilograms/hectare)")
+build_trends(trends_fris, "ALFALFA", "CA", EST_AVE_YIELD_KG, "Yield (kilograms/hectare)")
+build_trends(trends_fris, "ALFALFA", "CO", EST_AVE_YIELD_KG, "Yield (kilograms/hectare)")
+build_trendsa(trends_fris, "ALFALFA", "ID", EST_AVE_YIELD_KG, "Yield (kilograms/hectare)") ## too many counties for palette, use alternate function 
+build_trends(trends_fris, "ALFALFA", "MT", EST_AVE_YIELD_KG, "Yield (kilograms/hectare)") 
+build_trends(trends_fris, "ALFALFA", "NV", EST_AVE_YIELD_KG, "Yield (kilograms/hectare)")
+build_trends(trends_fris, "ALFALFA", "NM", EST_AVE_YIELD_KG, "Yield (kilograms/hectare)")
+build_trends(trends_fris, "ALFALFA", "OR", EST_AVE_YIELD_KG, "Yield (kilograms/hectare)")
+build_trendsa(trends_fris, "ALFALFA", "UT", EST_AVE_YIELD_KG, "Yield (kilograms/hectare)") ## too many counties for palette, use alternate function 
+build_trends(trends_fris, "ALFALFA", "WA", EST_AVE_YIELD_KG, "Yield (kilograms/hectare)")
+
+######## HAY
+build_trends(trends_fris, "OTHER_HAY", "AZ", EST_AVE_YIELD_KG, "Yield (kilograms/hectare)")
+build_trends(trends_fris, "OTHER_HAY", "CA", EST_AVE_YIELD_KG, "Yield (kilograms/hectare)")
+build_trends(trends_fris, "OTHER_HAY", "CO", EST_AVE_YIELD_KG, "Yield (kilograms/hectare)")
+build_trends(trends_fris, "OTHER_HAY", "MT", EST_AVE_YIELD_KG, "Yield (kilograms/hectare)")
+build_trends(trends_fris, "OTHER_HAY", "NV", EST_AVE_YIELD_KG, "Yield (kilograms/hectare)")
+build_trends(trends_fris, "OTHER_HAY", "OR", EST_AVE_YIELD_KG, "Yield (kilograms/hectare)")
+build_trends(trends_fris, "OTHER_HAY", "UT", EST_AVE_YIELD_KG, "Yield (kilograms/hectare)")
+build_trends(trends_fris, "OTHER_HAY", "WA", EST_AVE_YIELD_KG, "Yield (kilograms/hectare)")
+
+##### WHEAT
+build_trends(trends_fris, "WHEAT", "AZ", EST_AVE_YIELD_KG, "Yield (kilograms/hectare)")
+build_trends(trends_fris, "WHEAT", "CA", EST_AVE_YIELD_KG, "Yield (kilograms/hectare)")
+build_trends(trends_fris, "WHEAT", "CO", EST_AVE_YIELD_KG, "Yield (kilograms/hectare)")
+build_trends(trends_fris, "WHEAT", "ID", EST_AVE_YIELD_KG, "Yield (kilograms/hectare)")
+build_trends(trends_fris, "WHEAT", "OR", EST_AVE_YIELD_KG, "Yield (kilograms/hectare)")
+build_trends(trends_fris, "WHEAT", "UT", EST_AVE_YIELD_KG, "Yield (kilograms/hectare)")
+build_trends(trends_fris, "WHEAT", "WA", EST_AVE_YIELD_KG, "Yield (kilograms/hectare)")
+
+
+##### Corn Grain
+build_trends(trends_fris, "CORN_GRAIN", "CA", EST_AVE_YIELD_KG, "Yield (kilograms/hectare)")
+build_trends(trends_fris, "CORN_GRAIN", "CO", EST_AVE_YIELD_KG, "Yield (kilograms/hectare)")
+build_trends(trends_fris, "CORN_GRAIN", "ID", EST_AVE_YIELD_KG, "Yield (kilograms/hectare)") 
+build_trends(trends_fris, "CORN_GRAIN", "OR", EST_AVE_YIELD_KG, "Yield (kilograms/hectare)")
+build_trends(trends_fris, "CORN_GRAIN", "WA", EST_AVE_YIELD_KG, "Yield (kilograms/hectare)")
+
+##### Corn Silage
+build_trends(trends_fris, "CORN_SILAGE", "AZ", EST_AVE_YIELD_KG, "Yield (kilograms/hectare)")
+build_trends(trends_fris, "CORN_SILAGE", "CA", EST_AVE_YIELD_KG, "Yield (kilograms/hectare)")
+build_trends(trends_fris, "CORN_SILAGE", "CO", EST_AVE_YIELD_KG, "Yield (kilograms/hectare)")
+build_trends(trends_fris, "CORN_SILAGE", "ID", EST_AVE_YIELD_KG, "Yield (kilograms/hectare)") 
+build_trends(trends_fris, "CORN_SILAGE", "NM", EST_AVE_YIELD_KG, "Yield (kilograms/hectare)")
+build_trends(trends_fris, "CORN_SILAGE", "OR", EST_AVE_YIELD_KG, "Yield (kilograms/hectare)")
+build_trends(trends_fris, "CORN_SILAGE", "UT", EST_AVE_YIELD_KG, "Yield (kilograms/hectare)") 
+build_trends(trends_fris, "CORN_SILAGE", "WA", EST_AVE_YIELD_KG, "Yield (kilograms/hectare)")
+
+
+```
+
+# Yield - US (pounds/acre)
+
+```{r}
+####################################################################################################################
+####### Estimated Average Yield (US)
+####################################################################################################################
+######## ALFALFA
+build_trends(trends_fris, "ALFALFA", "AZ", EST_AVE_YIELD_LBS, "Yield (pounds/acre)")
+build_trends(trends_fris, "ALFALFA", "CA", EST_AVE_YIELD_LBS, "Yield (pounds/acre)")
+build_trends(trends_fris, "ALFALFA", "CO", EST_AVE_YIELD_LBS, "Yield (pounds/acre)")
+build_trendsa(trends_fris, "ALFALFA", "ID", EST_AVE_YIELD_LBS, "Yield (pounds/acre)") ## too many counties for palette, use alternate function 
+build_trends(trends_fris, "ALFALFA", "MT", EST_AVE_YIELD_LBS, "Yield (pounds/acre)") 
+build_trends(trends_fris, "ALFALFA", "NV", EST_AVE_YIELD_LBS, "Yield (pounds/acre)")
+build_trends(trends_fris, "ALFALFA", "NM", EST_AVE_YIELD_LBS, "Yield (pounds/acre)")
+build_trends(trends_fris, "ALFALFA", "OR", EST_AVE_YIELD_LBS, "Yield (pounds/acre)")
+build_trendsa(trends_fris, "ALFALFA", "UT", EST_AVE_YIELD_LBS, "Yield (pounds/acre)") ## too many counties for palette, use alternate function 
+build_trends(trends_fris, "ALFALFA", "WA", EST_AVE_YIELD_LBS, "Yield (pounds/acre)")
+
+######## HAY
+build_trends(trends_fris, "OTHER_HAY", "AZ", EST_AVE_YIELD_LBS, "Yield (pounds/acre)")
+build_trends(trends_fris, "OTHER_HAY", "CA", EST_AVE_YIELD_LBS, "Yield (pounds/acre)")
+build_trends(trends_fris, "OTHER_HAY", "CO", EST_AVE_YIELD_LBS, "Yield (pounds/acre)")
+build_trends(trends_fris, "OTHER_HAY", "MT", EST_AVE_YIELD_LBS, "Yield (pounds/acre)")
+build_trends(trends_fris, "OTHER_HAY", "NV", EST_AVE_YIELD_LBS, "Yield (pounds/acre)")
+build_trends(trends_fris, "OTHER_HAY", "OR", EST_AVE_YIELD_LBS, "Yield (pounds/acre)")
+build_trends(trends_fris, "OTHER_HAY", "UT", EST_AVE_YIELD_LBS, "Yield (pounds/acre)")
+build_trends(trends_fris, "OTHER_HAY", "WA", EST_AVE_YIELD_LBS, "Yield (pounds/acre)")
+
+##### WHEAT
+build_trends(trends_fris, "WHEAT", "AZ", EST_AVE_YIELD_LBS, "Yield (pounds/acre)")
+build_trends(trends_fris, "WHEAT", "CA", EST_AVE_YIELD_LBS, "Yield (pounds/acre)")
+build_trends(trends_fris, "WHEAT", "CO", EST_AVE_YIELD_LBS, "Yield (pounds/acre)")
+build_trends(trends_fris, "WHEAT", "ID", EST_AVE_YIELD_LBS, "Yield (pounds/acre)") 
+build_trends(trends_fris, "WHEAT", "OR", EST_AVE_YIELD_LBS, "Yield (pounds/acre)")
+build_trends(trends_fris, "WHEAT", "UT", EST_AVE_YIELD_LBS, "Yield (pounds/acre)") 
+build_trends(trends_fris, "WHEAT", "WA", EST_AVE_YIELD_LBS, "Yield (pounds/acre)")
+
+
+##### Corn Grain
+build_trends(trends_fris, "CORN_GRAIN", "CA", EST_AVE_YIELD_LBS, "Yield (pounds/acre)")
+build_trends(trends_fris, "CORN_GRAIN", "CO", EST_AVE_YIELD_LBS, "Yield (pounds/acre)")
+build_trends(trends_fris, "CORN_GRAIN", "ID", EST_AVE_YIELD_LBS, "Yield (pounds/acre)") 
+build_trends(trends_fris, "CORN_GRAIN", "OR", EST_AVE_YIELD_LBS, "Yield (pounds/acre)")
+build_trends(trends_fris, "CORN_GRAIN", "WA", EST_AVE_YIELD_LBS, "Yield (pounds/acre)")
+
+##### Corn Silage
+build_trends(trends_fris, "CORN_SILAGE", "AZ", EST_AVE_YIELD_LBS, "Yield (pounds/acre)")
+build_trends(trends_fris, "CORN_SILAGE", "CA", EST_AVE_YIELD_LBS, "Yield (pounds/acre)")
+build_trends(trends_fris, "CORN_SILAGE", "CO", EST_AVE_YIELD_LBS, "Yield (pounds/acre)")
+build_trends(trends_fris, "CORN_SILAGE", "ID", EST_AVE_YIELD_LBS, "Yield (pounds/acre)") 
+build_trends(trends_fris, "CORN_SILAGE", "NM", EST_AVE_YIELD_LBS, "Yield (pounds/acre)")
+build_trends(trends_fris, "CORN_SILAGE", "OR", EST_AVE_YIELD_LBS, "Yield (pounds/acre)")
+build_trends(trends_fris, "CORN_SILAGE", "UT", EST_AVE_YIELD_LBS, "Yield (pounds/acre)") 
+build_trends(trends_fris, "CORN_SILAGE", "WA", EST_AVE_YIELD_LBS, "Yield (pounds/acre)")
+```
+
+
+# Water use - metric (cubic meters/hectare)
+
+```{r}
+####################################################################################################################
+####### ESTIMATED AVERAGE WATER USE (Metric)
+####################################################################################################################
+######## ALFALFA
+build_trends(trends_fris, "ALFALFA", "AZ", EST_AVE_WU_M, "Water Application (cubic meters/hectare)")
+build_trends(trends_fris, "ALFALFA", "CA", EST_AVE_WU_M, "Water Application (cubic meters/hectare)")
+build_trends(trends_fris, "ALFALFA", "CO", EST_AVE_WU_M, "Water Application (cubic meters/hectare)")
+build_trendsa(trends_fris, "ALFALFA", "ID", EST_AVE_WU_M, "Water Application (cubic meters/hectare)") ## too many counties for palette, use alternate function 
+build_trends(trends_fris, "ALFALFA", "MT", EST_AVE_WU_M, "Water Application (cubic meters/hectare)") 
+build_trends(trends_fris, "ALFALFA", "NV", EST_AVE_WU_M, "Water Application (cubic meters/hectare)")
+build_trends(trends_fris, "ALFALFA", "NM", EST_AVE_WU_M, "Water Application (cubic meters/hectare)")
+build_trends(trends_fris, "ALFALFA", "OR", EST_AVE_WU_M, "Water Application (cubic meters/hectare)")
+build_trendsa(trends_fris, "ALFALFA", "UT", EST_AVE_WU_M, "Water Application (cubic meters/hectare)") ## too many counties for palette, use alternate function 
+build_trends(trends_fris, "ALFALFA", "WA", EST_AVE_WU_M, "Water Application (cubic meters/hectare)")
+
+######## HAY
+build_trends(trends_fris, "OTHER_HAY", "AZ", EST_AVE_WU_M, "Water Application (cubic meters/hectare)")
+build_trends(trends_fris, "OTHER_HAY", "CA", EST_AVE_WU_M, "Water Application (cubic meters/hectare)")
+build_trends(trends_fris, "OTHER_HAY", "CO", EST_AVE_WU_M, "Water Application (cubic meters/hectare)")
+build_trends(trends_fris, "OTHER_HAY", "MT", EST_AVE_WU_M, "Water Application (cubic meters/hectare)")
+build_trends(trends_fris, "OTHER_HAY", "NV", EST_AVE_WU_M, "Water Application (cubic meters/hectare)")
+build_trends(trends_fris, "OTHER_HAY", "OR", EST_AVE_WU_M, "Water Application (cubic meters/hectare)")
+build_trends(trends_fris, "OTHER_HAY", "UT", EST_AVE_WU_M, "Water Application (cubic meters/hectare)")
+build_trends(trends_fris, "OTHER_HAY", "WA", EST_AVE_WU_M, "Water Application (cubic meters/hectare)")
+
+##### WHEAT
+build_trends(trends_fris, "WHEAT", "AZ", EST_AVE_WU_M, "Water Application (cubic meters/hectare)")
+build_trends(trends_fris, "WHEAT", "CA", EST_AVE_WU_M, "Water Application (cubic meters/hectare)")
+build_trends(trends_fris, "WHEAT", "CO", EST_AVE_WU_M, "Water Application (cubic meters/hectare)")
+build_trends(trends_fris, "WHEAT", "ID", EST_AVE_WU_M, "Water Application (cubic meters/hectare)") 
+build_trends(trends_fris, "WHEAT", "OR", EST_AVE_WU_M, "Water Application (cubic meters/hectare)")
+build_trends(trends_fris, "WHEAT", "UT", EST_AVE_WU_M, "Water Application (cubic meters/hectare)") 
+build_trends(trends_fris, "WHEAT", "WA", EST_AVE_WU_M, "Water Application (cubic meters/hectare)")
+
+
+##### Corn Grain
+build_trends(trends_fris, "CORN_GRAIN", "CA", EST_AVE_WU_M, "Water Application (cubic meters/hectare)")
+build_trends(trends_fris, "CORN_GRAIN", "CO", EST_AVE_WU_M, "Water Application (cubic meters/hectare)")
+build_trends(trends_fris, "CORN_GRAIN", "ID", EST_AVE_WU_M, "Water Application (cubic meters/hectare)") 
+build_trends(trends_fris, "CORN_GRAIN", "OR", EST_AVE_WU_M, "Water Application (cubic meters/hectare)")
+build_trends(trends_fris, "CORN_GRAIN", "WA", EST_AVE_WU_M, "Water Application (cubic meters/hectare)")
+
+##### Corn Silage
+build_trends(trends_fris, "CORN_SILAGE", "AZ", EST_AVE_WU_M, "Water Application (cubic meters/hectare)")
+build_trends(trends_fris, "CORN_SILAGE", "CA", EST_AVE_WU_M, "Water Application (cubic meters/hectare)")
+build_trends(trends_fris, "CORN_SILAGE", "CO", EST_AVE_WU_M, "Water Application (cubic meters/hectare)")
+build_trends(trends_fris, "CORN_SILAGE", "ID", EST_AVE_WU_M, "Water Application (cubic meters/hectare)") 
+build_trends(trends_fris, "CORN_SILAGE", "NM", EST_AVE_WU_M, "Water Application (cubic meters/hectare)")
+build_trends(trends_fris, "CORN_SILAGE", "OR", EST_AVE_WU_M, "Water Application (cubic meters/hectare)")
+build_trends(trends_fris, "CORN_SILAGE", "UT", EST_AVE_WU_M, "Water Application (cubic meters/hectare)") 
+build_trends(trends_fris, "CORN_SILAGE", "WA", EST_AVE_WU_M, "Water Application (cubic meters/hectare)")
+
+```
+
+
+# Water use - US (acre feet/acre)
+
+```{r}
+####################################################################################################################
+####### Estimated Average Water Use (AF)
+####################################################################################################################
+######## ALFALFA
+build_trends(trends_fris, "ALFALFA", "AZ", EST_AVE_WU_AF, "Water Application (acre feet/acre)")
+build_trends(trends_fris, "ALFALFA", "CA", EST_AVE_WU_AF, "Water Application (acre feet/acre)")
+build_trends(trends_fris, "ALFALFA", "CO", EST_AVE_WU_AF, "Water Application (acre feet/acre)")
+build_trendsa(trends_fris, "ALFALFA", "ID", EST_AVE_WU_AF, "Water Application (acre feet/acre)") ## too many counties for palette, use alternate function 
+build_trends(trends_fris, "ALFALFA", "MT", EST_AVE_WU_AF, "Water Application (acre feet/acre)") 
+build_trends(trends_fris, "ALFALFA", "NV", EST_AVE_WU_AF, "Water Application (acre feet/acre)")
+build_trends(trends_fris, "ALFALFA", "NM", EST_AVE_WU_AF, "Water Application (acre feet/acre)")
+build_trends(trends_fris, "ALFALFA", "OR", EST_AVE_WU_AF, "Water Application (acre feet/acre)")
+build_trendsa(trends_fris, "ALFALFA", "UT", EST_AVE_WU_AF, "Water Application (acre feet/acre)") ## too many counties for palette, use alternate function 
+build_trends(trends_fris, "ALFALFA", "WA", EST_AVE_WU_AF, "Water Application (acre feet/acre)")
+
+######## HAY
+build_trends(trends_fris, "OTHER_HAY", "AZ", EST_AVE_WU_AF, "Water Application (acre feet/acre)")
+build_trends(trends_fris, "OTHER_HAY", "CA", EST_AVE_WU_AF, "Water Application (acre feet/acre)")
+build_trends(trends_fris, "OTHER_HAY", "CO", EST_AVE_WU_AF, "Water Application (acre feet/acre)")
+build_trends(trends_fris, "OTHER_HAY", "MT", EST_AVE_WU_AF, "Water Application (acre feet/acre)")
+build_trends(trends_fris, "OTHER_HAY", "NV", EST_AVE_WU_AF, "Water Application (acre feet/acre)")
+build_trends(trends_fris, "OTHER_HAY", "NM", EST_AVE_WU_AF, "Water Application (acre feet/acre)")
+build_trends(trends_fris, "OTHER_HAY", "OR", EST_AVE_WU_AF, "Water Application (acre feet/acre)")
+build_trends(trends_fris, "OTHER_HAY", "UT", EST_AVE_WU_AF, "Water Application (acre feet/acre)")
+build_trends(trends_fris, "OTHER_HAY", "WA", EST_AVE_WU_AF, "Water Application (acre feet/acre)")
+
+##### WHEAT
+build_trends(trends_fris, "WHEAT", "AZ", EST_AVE_WU_AF, "Water Application (acre feet/acre)")
+build_trends(trends_fris, "WHEAT", "CA", EST_AVE_WU_AF, "Water Application (acre feet/acre)")
+build_trends(trends_fris, "WHEAT", "CO", EST_AVE_WU_AF, "Water Application (acre feet/acre)")
+build_trends(trends_fris, "WHEAT", "ID", EST_AVE_WU_AF, "Water Application (acre feet/acre)") 
+build_trends(trends_fris, "WHEAT", "OR", EST_AVE_WU_AF, "Water Application (acre feet/acre)")
+build_trends(trends_fris, "WHEAT", "UT", EST_AVE_WU_AF, "Water Application (acre feet/acre)") 
+build_trends(trends_fris, "WHEAT", "WA", EST_AVE_WU_AF, "Water Application (acre feet/acre)")
+
+
+##### Corn Grain
+build_trends(trends_fris, "CORN_GRAIN", "CA", EST_AVE_WU_AF, "Water Application (acre feet/acre)")
+build_trends(trends_fris, "CORN_GRAIN", "CO", EST_AVE_WU_AF, "Water Application (acre feet/acre)")
+build_trends(trends_fris, "CORN_GRAIN", "ID", EST_AVE_WU_AF, "Water Application (acre feet/acre)") 
+build_trends(trends_fris, "CORN_GRAIN", "OR", EST_AVE_WU_AF, "Water Application (acre feet/acre)")
+build_trends(trends_fris, "CORN_GRAIN", "WA", EST_AVE_WU_AF, "Water Application (acre feet/acre)")
+
+##### Corn Silage
+build_trends(trends_fris, "CORN_SILAGE", "AZ", EST_AVE_WU_AF, "Water Application (acre feet/acre)")
+build_trends(trends_fris, "CORN_SILAGE", "CA", EST_AVE_WU_AF, "Water Application (acre feet/acre)")
+build_trends(trends_fris, "CORN_SILAGE", "CO", EST_AVE_WU_AF, "Water Application (acre feet/acre)")
+build_trends(trends_fris, "CORN_SILAGE", "ID", EST_AVE_WU_AF, "Water Application (acre feet/acre)") 
+build_trends(trends_fris, "CORN_SILAGE", "NM", EST_AVE_WU_AF, "Water Application (acre feet/acre)")
+build_trends(trends_fris, "CORN_SILAGE", "OR", EST_AVE_WU_AF, "Water Application (acre feet/acre)")
+build_trends(trends_fris, "CORN_SILAGE", "UT", EST_AVE_WU_AF, "Water Application (acre feet/acre)") 
+build_trends(trends_fris, "CORN_SILAGE", "WA", EST_AVE_WU_AF, "Water Application (acre feet/acre)")
+```
+
