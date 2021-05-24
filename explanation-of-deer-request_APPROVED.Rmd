@@ -1,0 +1,113 @@
+---
+title: "Explanation of DEER Request"
+author: "Britta Schumacher"
+date: "12/16/2020"
+output: 
+  html_document:
+    theme: flatly
+    toc: yes
+    toc_float: true
+    code_folding: hide
+---
+
+I am writing this .html in the hopes that it eases your way through this plethora of files and code. I am going to walk through each file and its contents.
+
+I had to send the request in a few chunks because the .png files are so huge I couldn't upload everything all at once.
+
+### First 
+
+First, you will see a folder titled 'code-not-evaluated'. This folder contains 13 .html's that I used to build our final dataset. You will see no identifying information in any of these .html's, nor will you see any code evaluated. I used the following call inside a setup code chunk:
+
+```{r setup, include=TRUE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+at the top of each of these documents to suppress all output. We want to preserve these files for a few reasons: 
+
+1) If reviewers have questions about how we built our data, or which variables from the FRIS/IWMS we used, we will be able to go back to this code and tell them exactly how we built the data that we used for our analyses--including how we weighted data (according to NASS protocol).;
+2) We want to preserve all of the work that we did so that IF in the future we are able to secure more grant funding we can easily re-create the data that I spent months building,;
+3) I (Britta) learned a TON about functional programming and cleaning data and would like to keep the code for my own records to become a better, more efficient programmer (I still have PLENTY to learn).
+
+Because all outputs are suppressed and any identifying information has been redacted, this code is quite literally just that: code. We are hoping these .html's will be easy to approve.
+
+In the last .html in this folder, '12.workflow-metadata.html', I explain what I am doing in each of the preceding documents. Additionally, the .html titled '10.analysis-no-code-evaluation.html' is the exact same document as the analysis_nomaps_ortrends.html/.Rmd you see EXCEPT the code has not been evaluated and I haven't used the fancy code_floating option from knitr that makes this document and 'analysis_nomaps_ortrends.html' so nice to look at.
+
+### Second
+
+Second, you will see a folder titled 'data-frames'. We are hopeful that in many cases NASS can approve our data summary tables (the .RDSs/.csv's [identical] inside 'data-frames') for removal at n >= 6 unique STPOIDs per summary. What I have done is build out these summary data frames to suppress all county-year-crop combinations where there were fewer than 6 unique STPOIDs to summarise across. Hopefully this all becomes clear once you start digging through the analysis_nomaps_ortrends.html/.Rmd. We would like to remove these summary tables (which have all been standardized/weighted by 'statewij') for future analyses with FRIS/IWMS data. Again, NONE of the information in these tables is raw data (except for the max water use and max yield, which Matt Fetter requested) and in NO CASE is there any identifying information about individual irrigators. In many cases, summarization is occuring across 100s of irrigators (you will see this reflected in the 'unique' column in each dataframe, which shows the number of unique STPOIDs summarised across). Files for assistance, barriers, information, and scheduling simply show proportions; as per Matt Fetter's instructions, I did not include a 'unique' column in these .csv's.
+
+Within these folders you will see a few different .csv's:
+
+1) 'alfalfa_SDcat..csv': creates bins for counties that are above +1SD, below -1SD and within +1SD/-1SD of irrigation productivity, estimated average water use, and estimated average yield in 2018. Includes columns used to find these bins. Also includes the column 'unique' which shows the number of unique STPOIDs summarised across and the maximum yield and water use in US measurements. Irrigation productivity is simply a ratio of yield/water used.
+
+2) 'assist_prop_allyrs.csv': the proportion of responses in each assistance category (weighted by 'statwij') summarised at *n* >= 6 unique STPOIDs across the 2013 IWMS and 2018 FRIS years (combined).
+
+3) 'assist_prop_indyrs.csv': the proportion of responses in each assistance category (weighted by 'statwij') summarised at *n* >= 6 unique STPOIDs for individual years.
+
+4) 'barrier_prop_allyrs.csv': the proportion of responses in each barrier category (weighted by 'statwij') summarised at *n* >= 6 unique STPOIDs across the 2013 IWMS and 2018 FRIS years (combined).
+
+5) 'barrier_prop_indyrs.csv': the proportion of responses in each barrier category (weighted by 'statwij') summarised at *n* >= 6 unique STPOIDs for individual years.
+
+6) 'bw_panel_stats.csv': the median and standard deviation of yield, water use, and irrigation productivity across the panel dataset for each crop.
+
+7) 'bw_st_stats.csv': the lower, middle, and upper bound of the box plot, plus the median and standard deviation of yield, water use, and irrigation productivity for each crop-year-state combination. Will use to discuss differences across crops-years-states.
+
+8) 'bw_yr_stats.csv': the lower, middle, and upper bound of the box plot, plus the median and standard deviation of yield, water use, and irrigation productivity for each crop-year combination. Will use to discuss differences across crop-years.
+
+9) 'info_prop_allyrs.csv': the proportion of responses in each information source category (weighted by 'statwij') summarised at *n* >= 6 unique STPOIDs across the 2013 IWMS and 2018 FRIS years (combined).
+
+10) 'info_prop_indyrs.csv': the proportion of responses in each information source category (weighted by 'statwij') summarised at *n* >= 6 unique STPOIDs for individual years.
+
+11) 'sched_prop_allyrs.csv': the proportion of responses in each scheduling method category (weighted by 'statwij') summarised at *n* >= 6 unique STPOIDs across the 2013 IWMS and 2018 FRIS years (combined).
+
+12) 'sched_prop_indyrs.csv': the proportion of responses in each scheduling method category (weighted by 'statwij') summarised at *n* >= 6 unique STPOIDs for individual years.
+
+13) 'sumstat_allyrs.csv': estimated average yield, estimated average water used, estimated average irrigation productivity summarised at county-crop *n* >= 6 unique STPOIDs across all years. Includes the column 'unique' which shows the number of unique STPOIDs summarised across and the maximum yield and water use in US measurements. Irrigation productivity is simply a ratio of yield/water used.
+
+14) 'sumstat_indyrs.csv': estimated average yield, estimated average water used, estimated average irrigation productivity summarised at county-crop *n* >= 6 unique STPOIDs across individual years (a fake example: Berks County, PA might have 14 irrigators in 2013, but only 9 in 2018--in 2018 the data will be suppressed and Berks will show as 'NA', in 2013, we will have the estimated average across those 14 irrigators). Includes the column 'unique' which shows the number of unique STPOIDs summarised across and the maximum yield and water use in US measurements. Irrigation productivity is simply a ratio of yield/water used.
+
+### Third
+
+Third, you will see a folder titled 'visualuzations'. Within this folder you will see ONLY box and whisker plots. All other visualizations will be reproduced using the .csv files above after Matter Fetter's approval. There are MANY .png's inside of here. There are so many because we do a few different things for every data type we want to visualize:
+
+1) We build separate visualizations for each crop (Alfalfa, Corn grain, Corn silage, Wheat, and Other Hay);
+
+2) We build visualizations for both metric (kg/hectare, cubic meters/hectare, kg/cubic meter) and US (lbs/acre, acre feet/acre, lbs/acre foot) measurements; and,
+
+3) We build data at the county-level facetted by state (*n* = 11).
+
+In order to build all of these visualizations, I used functional programming--so all of the visualizations built by the same functions simply call that function with different parameter inputs and different maps/graphs are created. All of the data that is called by these functions has been weighted by 'statwij' EXCEPT for the boxplots.
+
+Below is information regarding the plots I will reproduce using the .csv's Matt Fetter approves:
+
+For all of the maps, I use a quantile-ish approach to binning. We do not want to mask the counties at the high and low ends of the data, but highlight them instead--plus a large bin at each end means there is a wide range of values, which does hide the counties that are extreme outliers from being "found out". I also ensured that the the midpoint of a bin times 1.1 falls inside the "tops" of all bins. Some bins are quite small due to the nature of the data (a 0.25 difference in acre feet/acre is ~3050 cubic meters/hectare difference -- if we make the bins too large, well, we'll hide that there is any difference across counties at all). I also ensured that the top of the highest bin is larger than the most extreme county value--leaving these unbounded feels like an outright data-fib. Plus, in all cases there is a large range of values in this top bin and more than one county that sits inside of it. On maps I also include a histogram of how many counties "sit" in each bin. These histograms are for context--in no case can a person pinpoint a county's average estimated yield or water use or irrigation productivity. The data has all been weighted, anyway, so I don't imagine this is of any concern.
+
+The trend plots use average estimated yield, water use, and irrigation productivity calculated using Matt Fetter's exact instructions. We plot for only those counties that have enough data *n* >=6 unique STPOIDs in each year of the FRIS/IWMS to summarise across. We then plot facetted by state--thus, there are plenty of states with only one county. Again, these trends do NOT use raw data, but the weighted and summarised data we calculated based on Matt Fetter's exact instructions.
+
+The proportional bar graphs also have plenty of empty counties because we mask for only those counties in which *n* >=6 unique STPOIDs across all years and in 2018. These rely on weighted ('statewij') proportions. I made a request from DEER for proportional bar graphs that are built using the same code that built these proportional bar graphs--that request would have been approved had Lea Timms not asked for us to make one HUGE request. I am hoping this code still makes sense and that these will be an easy approval. I also made maps of the category in each county that had the greatest proportion of irrigators saying "Yes!" (or, 1, as the coding is in the FRIS/IWMS) for sources of assistance, sources of information, barriers to implementing improvements, and scheduling methods.
+
+### Fourth
+
+Fourth, you will see the bohemoth that is the code that built all of the data we are requesting out of the NORC. This document is called analysis_nomaps_ortrends.Rmd/analysis.html and again, it is the same as the not-executed code titled '10.analysis-no-code-evaluation.html'. I outlined prior to each code chunk WHAT the code is doing and why we are doing it. I also outlined WHICH key variables each code chunk utilized. 
+
+### Fifth
+
+Fifth, you will see a folder titled subset-data-NOTFOREXPORT. Within this folder you will find a few different data files Lea Timms requested in order to reproduce the results you see in the .html and in the boxplots.
+
+1) boxwhisker_rawdata_NOTFOREXPORT.csv: the data Lea should use to recreate the box and whisker plots. This data is subset from all_transformed.RDS for n >= 30 unique STPOIDs as per Matt Fetter's instructions. Lea, please call if you have any trouble loading in this data.;
+
+2) western_ctys_NOTFOREXPORT.RDS: Lea, I included this in case you want to see what any of the map products look like. This is simply a spatial file of all of the counties in the western 11 states. You read in .RDSs using the readRDS() function;
+
+3) transformed_rawdata_NOTFOREXPORT.csv: this data is the raw data I use in the ANOVA and correlation analyses. This data has a transformed column 'log_IP_AF' which is the log() of irrigation productivity in pounds/acre foot. We use this column for our analyses due to normality assumptions. Anytime I call full-panel-FRIS.RDS or all_transformed.RDS, you should bring in this dataset.;
+
+4) barriers-to-improvements_NOTFOREXPORT.RDS, scheduling-practices_NOTFOREXPORT.RDS, sources-of-information_NOTFOREXPORT.RDS, & gov-fin-tech-assistance-wideformat_NOTFOREXPORT.RDS: Lea, I included these files, which are the clean, raw data files I use to understand barriers to improvements, scheduling practices, sources of information, and sources of assistance in you want to reproduce the chi square analyses or any of the proportional analyses. Again, you read in these files using the readRDS() function.
+
+Lea, please call if you have any trouble loading in this data. You also asked for subset data for *n* >= 6 unique STPOIDs; I have not included these files in this NOTFOREXPORT folder because ALL the data that I am requesting out of the NORC in the dataframes folder is summarised at this level EXCEPT for the raw data, and, of course, the data used in the boxplots. If you would like to see these files summarised at *n* >= 6 unique STPOIDs, simply go to the dataframes folder!
+
+### Lastly
+
+I have included a header prior to each code chunk **DATA IN** and (where applicable) **DATA OUT**. This will tell you which datasets you need to pull in to reproduce results. Hopefully this helps streamline the process. There is a lot that we are requesting, but it's mostly just repeat after repeat after repeat visuzalizations for a new crop-variable-dataset combination.
+
+Thanks so much in advance!
+
+

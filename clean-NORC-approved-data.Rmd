@@ -1,0 +1,78 @@
+---
+title: "clean-NORC-approved-data"
+author: "Britta Schumacher"
+date: "December 31, 2020"
+output: html_document
+---
+
+```{r}
+assist_prop_allyrs <- read.csv("./data-frames/assist-prop-allyrs_APPROVED.csv")
+assist_prop_allyrs <- assist_prop_allyrs[2:15]
+assist_prop_allyrs$GEOID <- sprintf("%05d", assist_prop_allyrs$GEOID)
+saveRDS(assist_prop_allyrs, "./data/assist-prop-allyrs.RDS")
+
+all_ctys <- assist_prop_allyrs[1:3]
+library(stringr)
+all_ctys$COUNTY_ALPHA <- str_to_title(all_ctys$COUNTY_ALPHA)
+saveRDS(all_ctys, "./data/cty_names.RDS")
+
+assist_prop_indyrs <- read.csv("./data-frames/assist-prop-indyrs_APPROVED.csv")
+assist_prop_indyrs <- assist_prop_indyrs[2:16]
+assist_prop_indyrs$GEOID <- sprintf("%05d", assist_prop_indyrs$GEOID)
+saveRDS(assist_prop_indyrs, "./data/assist-prop-indyrs.RDS")
+
+barrier_prop_allyrs <- read.csv("./data-frames/barrier-prop-allyrs_APPROVED.csv")
+barrier_prop_allyrs <- barrier_prop_allyrs[2:14]
+barrier_prop_allyrs$GEOID <- sprintf("%05d", barrier_prop_allyrs$GEOID)
+saveRDS(barrier_prop_allyrs, "./data/barrier-prop-allyrs.RDS")
+
+barrier_prop_indyrs <- read.csv("./data-frames/barrier-prop-indyrs_APPROVED.csv")
+barrier_prop_indyrs <- barrier_prop_indyrs[2:15]
+barrier_prop_indyrs$GEOID <- sprintf("%05d", barrier_prop_indyrs$GEOID)
+saveRDS(barrier_prop_indyrs, "./data/barrier-prop-indyrs.RDS")
+
+bw_panel_stats <- read.csv("./data-frames/bw_panel_stats_APPROVED.csv")
+bw_panel_stats <- bw_panel_stats[2:5]
+saveRDS(bw_panel_stats, "./data/bw_panel_stats.RDS")
+
+bw_st_stats <- read.csv("./data-frames/bw_st_stats_APPROVED.csv")
+bw_st_stats <- bw_st_stats[2:12]
+saveRDS(bw_st_stats, "./data/bw_st_stats.RDS")
+
+bw_yr_stats <- read.csv("./data-frames/bw_yr_stats_APPROVED.csv")
+bw_yr_stats <- bw_yr_stats[2:12]
+saveRDS(bw_yr_stats, "./data/bw_yr_stats.RDS")
+
+info_prop_allyrs <- read.csv("./data-frames/info-prop-allyrs_APPROVED.csv")
+info_prop_allyrs <- info_prop_allyrs[2:13]
+info_prop_allyrs$GEOID <- sprintf("%05d", info_prop_allyrs$GEOID)
+saveRDS(info_prop_allyrs, "./data/info-prop-allyrs.RDS")
+
+info_prop_indyrs <- read.csv("./data-frames/info-prop-indyrs_APPROVED.csv")
+info_prop_indyrs <- info_prop_indyrs[2:14]
+info_prop_indyrs$GEOID <- sprintf("%05d", info_prop_indyrs$GEOID)
+saveRDS(info_prop_indyrs, "./data/info-prop-indyrs.RDS")
+
+sched_prop_allyrs <- read.csv("./data-frames/sched-prop-allyrs_APPROVED.csv")
+sched_prop_allyrs <- sched_prop_allyrs[2:15]
+sched_prop_allyrs$GEOID <- sprintf("%05d", sched_prop_allyrs$GEOID)
+saveRDS(sched_prop_allyrs, "./data/sched-prop-allyrs.RDS")
+
+sched_prop_indyrs <- read.csv("./data-frames/sched-prop-indyrs_APPROVED.csv")
+sched_prop_indyrs <- sched_prop_indyrs[2:16]
+sched_prop_indyrs$GEOID <- sprintf("%05d", sched_prop_indyrs$GEOID)
+saveRDS(sched_prop_indyrs, "./data/sched-prop-indyrs.RDS")
+
+sumstat_allyrs <- read.csv("./data-frames/sumstat_allyrs_SUPPRESSED.csv")
+sumstat_allyrs <- sumstat_allyrs[2:13]
+sumstat_allyrs$GEOID <- sprintf("%05d", sumstat_allyrs$GEOID)
+sumstat_allyrs <- sumstat_allyrs[complete.cases(sumstat_allyrs[,3:12]),]
+saveRDS(sumstat_allyrs, "./data/sumstat_allyrs.RDS")
+
+sumstat_indyrs <- read.csv("./data-frames/sumstat_indyrs_SUPPRESSED.csv")
+sumstat_indyrs <- sumstat_indyrs[2:14]
+sumstat_indyrs$GEOID <- sprintf("%05d", sumstat_indyrs$GEOID)
+sumstat_indyrs <- sumstat_indyrs[complete.cases(sumstat_indyrs[,4:13]),]
+saveRDS(sumstat_indyrs, "./data/sumstat_indyrs.RDS")
+```
+
