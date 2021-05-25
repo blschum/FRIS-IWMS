@@ -1001,16 +1001,16 @@ find_summary
 find <- find %>% 
   mutate(
     category = case_when(
-      category == "K215" ~ "K0215 - USDA water conservation (tech.)",
-      category == "K216" ~ "K0216 - USDA water conservation (fin.)",
-      category == "K217" ~ "K0217 - USDA stewardship/easements (tech.)",
-      category == "K218" ~ "K0218 - USDA stewardship/easements (fin.)",
-      category == "K219" ~ "K0219 - Non-USDA federal programs (tech.)",
-      category == "K235" ~ "K0235 - Non-USDA federal programs (fin.)",
-      category == "K236" ~ "K0236 - State & local water programs (tech.)",
-      category == "K237" ~ "K0237 - State & local water programs (fin.)",
-      category == "K238" ~ "K0238 - Private dealers & lenders (tech.)",
-      category == "K239" ~ "K0239 - Private dealers & lenders (fin.)"
+      category == "K215" ~ "K0215 - USDA conservation*",
+      category == "K216" ~ "K0216 - USDA conservation",
+      category == "K217" ~ "K0217 - USDA stewardship*",
+      category == "K218" ~ "K0218 - USDA stewardship",
+      category == "K219" ~ "K0219 - Non-USDA programs*",
+      category == "K235" ~ "K0235 - Non-USDA programs",
+      category == "K236" ~ "K0236 - Local water programs*",
+      category == "K237" ~ "K0237 - Local water programs",
+      category == "K238" ~ "K0238 - Private lenders*",
+      category == "K239" ~ "K0239 - Private lenders"
     )
   )
 
@@ -1025,7 +1025,7 @@ assist_map <- tm_shape(ctys) + tm_polygons(col="grey", border.col = "white") +
     tm_polygons("Type of Assistance", palette = "viridis", border.col = "white")  +
     tm_legend(outside = TRUE) +
     tm_layout(frame= FALSE,
-              legend.text.size = 0.45)
+              legend.text.size = 0.65)
 
 tmap_save(assist_map, "./viz/assistance/assist_map.png", width = 7, height = 5, dpi = 300)
 
