@@ -504,8 +504,35 @@ w <- readRDS("./data/barrier-prop-indyrs.RDS")
 ################################################################################################################################################# BUILD FACETTED PROPORTIONAL BAR CHARTS
 ####################################################################################################################
 # build proportion table above into suitable data format for proportion barchart (ie. long format)
-v <- v %>% select(!c("total")) %>% gather(category, proportion, 4:12)
-w <- w %>% filter(YEAR == 2018) %>% select(!c("total")) %>% gather(category, proportion, 5:13)
+v <- v %>% select(!c("total")) %>% gather(category, proportion, 4:12) %>% 
+  mutate(
+    category = case_when(
+      category == "K1070" ~ "K1070 - Low priority",
+      category == "K1071" ~ "K1071 - Reduced yield or quality",
+      category == "K1072" ~ "K1072 - Physical conditions",
+      category == "K1073" ~ "K1073 - Cost outweighs benefits",
+      category == "K1074" ~ "K1074 - Cannot finance",
+      category == "K1075" ~ "K1075 - No landlord cost-share",
+      category == "K1076" ~ "K1076 - Water uncertainty",
+      category == "K1077" ~ "K1077 - Not farming long-term",
+      category == "K1078" ~ "K1078 - Time and cost increase"
+    )
+  )
+
+w <- w %>% filter(YEAR == 2018) %>% select(!c("total")) %>% gather(category, proportion, 5:13) %>% 
+  mutate(
+    category = case_when(
+      category == "K1070" ~ "K1070 - Low priority",
+      category == "K1071" ~ "K1071 - Reduced yield or quality",
+      category == "K1072" ~ "K1072 - Physical conditions",
+      category == "K1073" ~ "K1073 - Cost outweighs benefits",
+      category == "K1074" ~ "K1074 - Cannot finance",
+      category == "K1075" ~ "K1075 - No landlord cost-share",
+      category == "K1076" ~ "K1076 - Water uncertainty",
+      category == "K1077" ~ "K1077 - Not farming long-term",
+      category == "K1078" ~ "K1078 - Time and cost increase"
+    )
+  )
 
 
 barriers_plots <- function(df, state, title, place) {
@@ -593,17 +620,19 @@ find <- find %>%
 find_18 <- find_18 %>% 
   mutate(
     category = case_when(
-      category == "K1070" ~ "K1070 - Low priority",
-      category == "K1071" ~ "K1071 - Reduced yield or quality",
-      category == "K1072" ~ "K1072 - Physical conditions",
-      category == "K1073" ~ "K1073 - Cost outweighs benefits",
-      category == "K1074" ~ "K1074 - Cannot finance",
-      category == "K1075" ~ "K1075 - No landlord cost-share",
-      category == "K1076" ~ "K1076 - Water uncertainty",
-      category == "K1077" ~ "K1077 - Not farming long-term",
-      category == "K1078" ~ "K1078 - Time and cost increase"
+      category == "K1070 - Low priority" ~ "Low priority (69)",
+      category == "K1071 - Reduced yield or quality" ~ "Reduced yield or quality (7)",
+      category == "K1072 - Physical conditions" ~ "Physical conditions (11)",
+      category == "K1073 - Cost outweighs benefits" ~ "Cost outweighs benefits (23)",
+      category == "K1074 - Cannot finance" ~ "Cannot finance (68)",
+      category == "K1075 - No landlord cost-share" ~ "No landlord cost-share (1)",
+      category == "K1076 - Water uncertainty" ~ "Water uncertainty (35)",
+      category == "K1077 - Not farming long-term" ~ "Not farming long-term (7)",
+      category == "K1078 - Time and cost increase" ~ "Time and cost increase (3)"
     )
   )
+
+find_18$category <- ordered(find_18$category, levels = c("Low priority (69)", "Cannot finance (68)", "Water uncertainty (35)", "Cost outweighs benefits (23)", "Physical conditions (11)","Reduced yield or quality (7)","Not farming long-term (7)","Time and cost increase (3)","No landlord cost-share (1)"))
 
 # Change colnames for visuzaliation
 colnames(find)[4] <- "Barrier to Implementation"
@@ -617,7 +646,8 @@ barrier18_sp <- sp::merge(ctys, find_18, by = "GEOID", duplicateGeoms = TRUE, al
 # Make a map for summarised data across all years
 barrier_map <- tm_shape(ctys) + tm_polygons(col="grey", border.col = "white") +
   tm_shape(barrier_sp) + 
-    tm_polygons("Barrier to Implementation", palette = c("#66C2A5", "#FC8D62", "#8DA0CB", "#E78AC3", "#A6D854", "#FFD92F", "#E5C494", "#696969", "#2F2F2F"), border.col = "white")  +
+    tm_polygons("Barrier to Implementation", palette = c("#66C2A5", "#FC8D62", "#8DA0CB", "#E78AC3", "#A6D854", "#FFD92F", "#E5C494", "#696969", "#2F2F2F"),
+ border.col = "white")  +
     tm_legend(outside = TRUE) +
     tm_layout(frame= FALSE,
               legend.text.size = 0.65)
@@ -627,7 +657,7 @@ tmap_save(barrier_map, "./viz/barriers/barrier_map.png", width = 7, height = 5, 
 # Make a map for just 2018
 barrier18_map <- tm_shape(ctys) + tm_polygons(col="grey", border.col = "white") +
   tm_shape(barrier18_sp) + 
-    tm_polygons("Barrier to Implementation", palette = c("#66C2A5", "#FC8D62", "#8DA0CB", "#E78AC3", "#A6D854", "#FFD92F", "#E5C494", "#696969", "#2F2F2F"), border.col = "white")  +
+    tm_polygons("Barrier to Implementation", palette = c("#66C2A5", "#A6D854", "#E5C494","#E78AC3", "#8DA0CB", "#FC8D62", "#696969", "#2F2F2F","#FFD92F"), border.col = "white")  +
     tm_legend(outside = TRUE) +
     tm_layout(frame= FALSE,
               legend.text.size = 0.65)
@@ -658,8 +688,37 @@ w <- readRDS("./data/sched-prop-indyrs.RDS")
 ################################################################################################################################################# BUILD FACETTED PROPORTIONAL BAR CHARTS
 ####################################################################################################################
 # build proportion table above into suitable data format for proportion barchart (ie. long format)
-v <- v %>% select(!c("total")) %>% gather(category, proportion, 4:13)
-w <- w %>% filter(YEAR == 2018) %>% select(!c("total")) %>% gather(category, proportion, 5:14)
+v <- v %>% select(!c("total")) %>% gather(category, proportion, 4:13) %>% 
+  mutate(
+    category = case_when(
+      category == "K1020" ~ "K1020 - Condition of crop",
+      category == "K1021" ~ "K1021 - Feel of the soil",
+      category == "K1022" ~ "K1022 - Soil moisture sensor",
+      category == "K1023" ~ "K1023 - Plant moisture sensor",
+      category == "K1024" ~ "K1024 - Scheduling service",
+      category == "K1025" ~ "K1025 - Daily crop-water ET",
+      category == "K1026" ~ "K1026 - Water delivered in turn",
+      category == "K1027" ~ "K1027 - Personal calendar",
+      category == "K1028" ~ "K1028 - Computer simulation models",
+      category == "K1029" ~ "K1029 - When neighbors watered"
+    )
+  )
+
+w <- w %>% filter(YEAR == 2018) %>% select(!c("total")) %>% gather(category, proportion, 5:14) %>% 
+  mutate(
+    category = case_when(
+      category == "K1020" ~ "K1020 - Condition of crop",
+      category == "K1021" ~ "K1021 - Feel of the soil",
+      category == "K1022" ~ "K1022 - Soil moisture sensor",
+      category == "K1023" ~ "K1023 - Plant moisture sensor",
+      category == "K1024" ~ "K1024 - Scheduling service",
+      category == "K1025" ~ "K1025 - Daily crop-water ET",
+      category == "K1026" ~ "K1026 - Water delivered in turn",
+      category == "K1027" ~ "K1027 - Personal calendar",
+      category == "K1028" ~ "K1028 - Computer simulation models",
+      category == "K1029" ~ "K1029 - When neighbors watered"
+    )
+  )
 
 
 scheduling_plots <- function(df, state, title, place) {
@@ -744,18 +803,20 @@ find <- find %>%
 find_18 <- find_18 %>% 
   mutate(
     category = case_when(
-      category == "K1020" ~ "K1020 - Condition of crop",
-      category == "K1021" ~ "K1021 - Feel of the soil",
-      category == "K1022" ~ "K1022 - Soil moisture sensor",
-      category == "K1023" ~ "K1023 - Plant moisture sensor",
-      category == "K1024" ~ "K1024 - Scheduling service",
-      category == "K1025" ~ "K1025 - Daily crop-water ET",
-      category == "K1026" ~ "K1026 - Water delivered in turn",
-      category == "K1027" ~ "K1027 - Personal calendar",
-      category == "K1028" ~ "K1028 - Computer simulation models",
-      category == "K1029" ~ "K1029 - When neighbors watered"
+      category == "K1020 - Condition of crop" ~ "Condition of crop (253)",
+      category == "K1021 - Feel of the soil" ~ "Feel of the soil (7)",
+      category == "K1022 - Soil moisture sensor" ~ "Soil moisture sensor (1)",
+      category == "K1023 - Plant moisture sensor" ~ "Plant moisture sensor (0)",
+      category == "K1024 - Scheduling service" ~ "Scheduling service (4)",
+      category == "K1025 - Daily crop-water ET" ~ "Daily crop-water ET (0)",
+      category == "K1026 - Water delivered in turn" ~ "Water delivered in turn (31)",
+      category == "K1027 - Personal calendar" ~ "Personal calendar (2)",
+      category == "K1028 - Computer simulation models" ~ "Computer simulation models (0)",
+      category == "K1029 - When neighbors watered" ~ "When neighbors watered (1)"
     )
   )
+
+find_18$category <- ordered(find_18$category, levels = c("Condition of crop (253)", "Water delivered in turn (31)", "Feel of the soil (7)", "Scheduling service (4)", "Personal calendar (2)","Soil moisture sensor (1)","When neighbors watered (1)"))
 
 # rename columns for visualizations
 colnames(find)[4] <- "Scheduling Method"
@@ -779,7 +840,7 @@ tmap_save(sched_map, "./viz/scheduling/sched_map.png", width = 7, height = 5, dp
 
 sched18_map <- tm_shape(ctys) + tm_polygons(col="grey", border.col = "white") +
   tm_shape(sched18_sp) + 
-    tm_polygons("Scheduling Method", palette = c("#A6CEE3", "#1F78B4", "#B2DF8A", "#FB9A99", "#FDBF6F", "#FF7F00", "#6A3D9A"), border.col = "white")  +
+    tm_polygons("Scheduling Method", palette = c("#A6CEE3", "#FDBF6F", "#1F78B4", "#FB9A99", "#FF7F00", "#B2DF8A", "#6A3D9A"), border.col = "white")  +
     tm_legend(outside = TRUE) +
     tm_layout(frame= FALSE,
               legend.text.size = 0.65)
@@ -809,8 +870,32 @@ w <- readRDS("./data/info-prop-indyrs.RDS")
 ################################################################################################################################################# BUILD FACETTED PROPORTIONAL BAR CHARTS
 ####################################################################################################################
 # build proportion table above into suitable data format for proportion barchart (ie. long format)
-v <- v %>% select(!c("total")) %>% gather(category, proportion, 4:11)
-w <- w %>% filter(YEAR == 2018) %>% select(!c("total")) %>% gather(category, proportion, 5:12)
+v <- v %>% select(!c("total")) %>% gather(category, proportion, 4:11) %>%   mutate(
+    category = case_when(
+      category == "K1040" ~ "K1040 - Extension or university",
+      category == "K1041" ~ "K1041 - Private consultants",
+      category == "K1042" ~ "K1042 - Equipment dealers",
+      category == "K1043" ~ "K1043 - Irrigation district",
+      category == "K1044" ~ "K1044 - Government",
+      category == "K1045" ~ "K1045 - Press",
+      category == "K1046" ~ "K1046 - Neighbors",
+      category == "K1047" ~ "K1047 - Internet"
+    )
+  )
+
+w <- w %>% filter(YEAR == 2018) %>% select(!c("total")) %>% gather(category, proportion, 5:12) %>%   mutate(
+    category = case_when(
+      category == "K1040" ~ "K1040 - Extension or university",
+      category == "K1041" ~ "K1041 - Private consultants",
+      category == "K1042" ~ "K1042 - Equipment dealers",
+      category == "K1043" ~ "K1043 - Irrigation district",
+      category == "K1044" ~ "K1044 - Government",
+      category == "K1045" ~ "K1045 - Press",
+      category == "K1046" ~ "K1046 - Neighbors",
+      category == "K1047" ~ "K1047 - Internet"
+    )
+  )
+
 
 information_plots <- function(df, state, title, place) {
   
@@ -892,16 +977,19 @@ find <- find %>%
 find_18 <- find_18 %>% 
   mutate(
     category = case_when(
-      category == "K1040" ~ "K1040 - Extension or university",
-      category == "K1041" ~ "K1041 - Private consultants",
-      category == "K1042" ~ "K1042 - Equipment dealers",
-      category == "K1043" ~ "K1043 - Irrigation district",
-      category == "K1044" ~ "K1044 - Government",
-      category == "K1045" ~ "K1045 - Press",
-      category == "K1046" ~ "K1046 - Neighbors",
-      category == "K1047" ~ "K1047 - Internet"
+      category == "K1040 - Extension or university" ~ "Extension or university (46)",
+      category == "K1041 - Private consultants" ~ "Private consultants (32)", 
+      category == "K1042 - Equipment dealers" ~ "Equipment dealers (23)",
+      category == "K1043 - Irrigation district" ~ "Irrigation district (21)",
+      category == "K1044 - Government" ~ "Government (9)",
+      category == "K1045 - Press" ~ "Press (1)",
+      category == "K1046 - Neighbors" ~ "Neighbors (82)",
+      category == "K1047 - Internet" ~ "Internet (4)"
     )
   )
+
+find_18$category <- as.factor(find_18$category)
+find_18$category <- ordered(find_18$category, levels = c("Neighbors (82)", "Extension or university (46)", "Private consultants (32)", "Equipment dealers (23)", "Irrigation district (21)","Government (9)","Internet (4)","Press (1)"))
 
 colnames(find)[4] <- "Information Source"
 colnames(find_18)[5] <- "Information Source"
@@ -922,7 +1010,7 @@ tmap_save(info_map, "./viz/information/info_map.png", width = 7, height = 5, dpi
 
 info_map18 <- tm_shape(ctys) + tm_polygons(col="grey", border.col = "white") +
   tm_shape(info_sp18) + 
-    tm_polygons("Information Source", palette = "Dark2", border.col = "white")  +
+    tm_polygons("Information Source", palette = c("#A6761D","#1B9E77","#D95F02","#7570B3", "#E7298A", "#66A61E","#666666","#E6AB02"), border.col = "white")  +
     tm_legend(outside = TRUE) +
     tm_layout(frame= FALSE,
               legend.text.size = 0.65)
@@ -951,7 +1039,21 @@ v <- readRDS("./data/assist-prop-allyrs.RDS")
 ################################################################################################################################################# BUILD FACETTED PROPORTIONAL BAR CHARTS
 ####################################################################################################################
 # build proportion table above into suitable data format for proportion barchart (ie. long format)
-v <- v %>% select(!c("total")) %>% gather(category, proportion, 4:13)
+v <- v %>% select(!c("total")) %>% gather(category, proportion, 4:13) %>% 
+  mutate(
+    category = case_when(
+      category == "K215" ~ "K0215 - USDA conservation*",
+      category == "K216" ~ "K0216 - USDA conservation",
+      category == "K217" ~ "K0217 - USDA stewardship*",
+      category == "K218" ~ "K0218 - USDA stewardship",
+      category == "K219" ~ "K0219 - Non-USDA programs*",
+      category == "K235" ~ "K0235 - Non-USDA programs",
+      category == "K236" ~ "K0236 - Local water programs*",
+      category == "K237" ~ "K0237 - Local water programs",
+      category == "K238" ~ "K0238 - Private lenders*",
+      category == "K239" ~ "K0239 - Private lenders"
+    )
+  )
 
 library(viridis)
 assistance_plots <- function(df, state, title, place) {
@@ -1001,18 +1103,21 @@ find_summary
 find <- find %>% 
   mutate(
     category = case_when(
-      category == "K215" ~ "K0215 - USDA conservation*",
-      category == "K216" ~ "K0216 - USDA conservation",
-      category == "K217" ~ "K0217 - USDA stewardship*",
-      category == "K218" ~ "K0218 - USDA stewardship",
-      category == "K219" ~ "K0219 - Non-USDA programs*",
-      category == "K235" ~ "K0235 - Non-USDA programs",
-      category == "K236" ~ "K0236 - Local water programs*",
-      category == "K237" ~ "K0237 - Local water programs",
-      category == "K238" ~ "K0238 - Private lenders*",
-      category == "K239" ~ "K0239 - Private lenders"
+      category == "K0215 - USDA conservation*" ~ "USDA conservation* (48)",
+      category == "K0216 - USDA conservation" ~ "USDA conservation (68)",
+      category == "K0217 - USDA stewardship*" ~ "USDA stewardship* (2)",
+      category == "K0218 - USDA stewardship" ~ "USDA stewardship (4)",
+      category == "K0219 - Non-USDA programs*" ~ "Non-USDA programs* (2)",
+      category == "K0235 - Non-USDA programs" ~ "Non-USDA programs (5)",
+      category == "K0236 - Local water programs*" ~ "Local water programs* (9)",
+      category == "K0237 - Local water programs" ~ "Local water programs (8)",
+      category == "K0238 - Private lenders*" ~ "Private lenders* (8)",
+      category == "K0239 - Private lenders" ~ "Private lenders (8)"
     )
   )
+
+find$category <- as.factor(find$category)
+find$category <- ordered(find$category, levels = c("USDA conservation (68)", "USDA conservation* (48)", "Local water programs* (9)", "Local water programs (8)",  "Private lenders* (8)","Private lenders (8)","Non-USDA programs (5)","USDA stewardship (4)","USDA stewardship* (2)","Non-USDA programs* (2)"))
 
 colnames(find)[4] <- "Type of Assistance"
 ctys <- readRDS("./data/western_ctys.RDS")
@@ -1022,7 +1127,7 @@ assist_sp <- sp::merge(ctys, find, by = "GEOID", duplicateGeoms = TRUE, all = TR
 library(tmap)
 assist_map <- tm_shape(ctys) + tm_polygons(col="grey", border.col = "white") +
   tm_shape(assist_sp) + 
-    tm_polygons("Type of Assistance", palette = "viridis", border.col = "white")  +
+    tm_polygons("Type of Assistance", palette = c("#332288","#88CCEE","#44AA99","#117733","#AA4499","#882255","#6468AD","#CE792A","#DDCC77","#C8BFEC"), border.col = "white")  +
     tm_legend(outside = TRUE) +
     tm_layout(frame= FALSE,
               legend.text.size = 0.65)
