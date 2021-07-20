@@ -1,0 +1,269 @@
+---
+title: "FRIS-IWMS SI Visualizations, by Figure #"
+author: "Britta Schumacher"
+date: "Last updated: `r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  html_document:
+    theme: flatly
+    toc: yes
+    toc_float: true
+    code_folding: hide
+---
+
+
+```{r setup, include = FALSE, cache = FALSE}
+
+knitr::opts_chunk$set(
+  warning = FALSE,
+  message = FALSE
+)
+
+```
+
+### Set up
+
+Load relevant packages & common data
+```{r}
+library(ggplot2)
+library(sp)
+library(tidyverse)
+library(tmap)
+library(RColorBrewer)
+library(rgeos)
+library(spdplyr)
+library(viridis)
+library(rgdal)
+library(rgeos)
+library(ggpubr)
+
+ctys <- readRDS("./data/county.RDS")
+w_ctys <- readRDS("./data/western_ctys.RDS")
+state <- readRDS("./data/states.RDS")
+```
+
+### SI Figure 1. 
+
+Average Estimated Irrigation Productivity in (A.) Corn Grain, (B.) Corn Silage, (C.) Other Hay, (D.) Wheat, and (E.) Alfalfa Over Study Period
+```{r}
+# Build spatial across crops using the _indyrs datasets (summarizes across individual years)
+fris_sp_allyrs <- readRDS("./data/sumstat_allyrs.RDS")
+cty_names <- readRDS("./data/cty_names.RDS")
+
+sumstat_allyrs_df <- merge(cty_names, fris_sp_allyrs)
+
+# Build spatial across crops using the panel dataset (summarizes across all years)
+sp_allyrs_fris <- sp::merge(w_ctys, fris_sp_allyrs, by = "GEOID", duplicateGeoms = TRUE, all = TRUE)
+
+# A) corn silage IP
+cs <- sp_allyrs_fris %>% 
+    filter(CROP == "CORN_SILAGE") 
+
+cs_ip_map <- tm_shape(w_ctys) + tm_polygons(col="grey", border.col = "white") +
+  tm_shape(cs) + 
+    tm_polygons(col="EST_IP_KG_M", breaks = c(1.5,2.25,2.75,3.25,3.75,4.5,7.25), palette = "Purples", border.col = "white",
+              legend.hist = TRUE, title = "Estimated Average Irrigation\nProductivity in Corn Silage\n(kilograms/cubic meter)") +
+    tm_legend(outside = TRUE, hist.width = 1.5) +
+    tm_layout(main.title = "B.", main.title.position = c("left"), frame= FALSE, legend.hist.size = 0.5)
+
+cs_ip_map
+
+# B) corn grain IP
+cg <- sp_allyrs_fris %>% 
+    filter(CROP == "CORN_GRAIN") 
+
+cg_ip_map <- tm_shape(w_ctys) + tm_polygons(col="grey", border.col = "white") +
+  tm_shape(cg) + 
+    tm_polygons(col="EST_IP_KG_M", breaks = c(0.5,1.25,1.5,1.75,2,2.5,3), palette = "Blues", border.col = "white",
+              legend.hist = TRUE, title = "Estimated Average Irrigation\nProductivity in Corn Grain\n(kilograms/cubic meter)") +
+    tm_legend(outside = TRUE, hist.width = 1.5) +
+    tm_layout(main.title = "A.", main.title.position = c("left"), frame= FALSE, legend.hist.size = 0.5)
+
+cg_ip_map
+
+# C) hay IP
+hay <- sp_allyrs_fris %>% 
+    filter(CROP == "OTHER_HAY") 
+
+hay_ip_map <- tm_shape(w_ctys) + tm_polygons(col="grey", border.col = "white") +
+  tm_shape(hay) + 
+    tm_polygons(col="EST_IP_KG_M", breaks = c(0.25,0.75,1,1.25,1.5,2.25,9.5), palette = "Reds", border.col = "white",
+              legend.hist = TRUE, title = "Estimated Average Irrigation\nProductivity in Hay\n(kilograms/cubic meter)") +
+    tm_legend(outside = TRUE, hist.width = 1.5) +
+    tm_layout(main.title = "C.", main.title.position = c("left"), frame= FALSE, legend.hist.size = 0.5)
+
+hay_ip_map
+
+# D) wheat IP
+wheat <- sp_allyrs_fris %>% 
+    filter(CROP == "WHEAT") 
+
+wheat_ip_map <- tm_shape(w_ctys) + tm_polygons(col="grey", border.col = "white") +
+  tm_shape(wheat) + 
+    tm_polygons(col="EST_IP_KG_M", breaks = c(0.25,0.75,1,1.25,1.5,1.75,4), palette = "Oranges", border.col = "white",
+              legend.hist = TRUE, title = "Estimated Average Irrigation\nProductivity in Wheat\n(kilograms/cubic meter)") +
+    tm_legend(outside = TRUE, hist.width = 1.5) +
+    tm_layout(main.title = "D.", main.title.position = c("left"), frame= FALSE, legend.hist.size = 0.5)
+
+wheat_ip_map
+
+# E) alfalfa IP
+alfalfa <- sp_allyrs_fris %>% 
+    filter(CROP == "ALFALFA") 
+
+alfalfa_ip_map <- tm_shape(w_ctys) + tm_polygons(col="grey", border.col = "white") +
+  tm_shape(alfalfa) + 
+      tm_layout(main.title = "E.", main.title.position = c("left"), frame= FALSE, legend.hist.size = 0.5) +
+    tm_polygons(col="EST_IP_KG_M", breaks = c(0.75,1,1.25,1.5,1.75,2.25,8.5), palette = "Greens", border.col = "white",
+              legend.hist = TRUE, title = "Estimated Average Irrigation\nProductivity in Alfalfa\n(kilograms/cubic meter)") +
+    tm_legend(outside = TRUE, hist.width = 1.5) 
+
+alfalfa_ip_map
+
+sifigure1 <- tmap_arrange(cg_ip_map, cs_ip_map,hay_ip_map,wheat_ip_map,alfalfa_ip_map, ncol=2)
+tmap_save(sifigure1, "./viz/SI-Figures/SI-Figure1.jpeg", width = 320, height = 420, units = "mm", dpi = 400)
+```
+
+### SI Figure 2. 
+
+Average Estimated Yield in (A.) Corn Grain, (B.) Corn Silage, (C.) Other Hay, (D.) Wheat, and (E.) Alfalfa Over Study Period
+```{r}
+# A) corn silage IP
+cs <- sp_allyrs_fris %>% 
+    filter(CROP == "CORN_SILAGE") 
+
+cs_yield_map <- tm_shape(w_ctys) + tm_polygons(col="grey", border.col = "white") +
+  tm_shape(cs) + 
+    tm_polygons(col="EST_AVE_YIELD_KG", breaks = c(12500,18000,19000,20000,21500,23000, 26000), palette = "Purples", border.col = "white",
+              legend.hist = TRUE, title = "Average Estimated\nCorn Silage Yield\n(kg/hectare)") +
+    tm_legend(outside = TRUE, hist.width = 1.5) +
+    tm_layout(main.title = "B.", main.title.position = c("left"), frame= FALSE, legend.hist.size = 0.5)
+
+cs_yield_map
+
+# B) corn grain IP
+cg <- sp_allyrs_fris %>% 
+    filter(CROP == "CORN_GRAIN") 
+
+cg_yield_map <- tm_shape(w_ctys) + tm_polygons(col="grey", border.col = "white") +
+  tm_shape(cg) + 
+    tm_polygons(col="EST_AVE_YIELD_KG", breaks = c(8250,10000,11000,12000,13000,14000,16250), palette = "Blues", border.col = "white",
+              legend.hist = TRUE, title = "Average Estimated\nCorn Grain Yield\n(kg/hectare)") +
+    tm_legend(outside = TRUE, hist.width = 1.5) +
+    tm_layout(main.title = "A.", main.title.position = c("left"), frame= FALSE, legend.hist.size = 0.5)
+
+cg_yield_map
+
+# C) hay IP
+hay <- sp_allyrs_fris %>% 
+    filter(CROP == "OTHER_HAY") 
+
+hay_yield_map <- tm_shape(w_ctys) + tm_polygons(col="grey", border.col = "white") +
+  tm_shape(hay) + 
+    tm_polygons(col="EST_AVE_YIELD_KG", breaks = c(2000,4000,5500,7000,9000,12000,23000), palette = "Reds", border.col = "white",
+              legend.hist = TRUE, title = "Average Estimated\nHay Yield\n(kg/hectare)") +
+    tm_legend(outside = TRUE, hist.width = 1.5) +
+    tm_layout(main.title = "C.", main.title.position = c("left"), frame= FALSE, legend.hist.size = 0.5)
+
+hay_yield_map
+
+# D) wheat IP
+wheat <- sp_allyrs_fris %>% 
+    filter(CROP == "WHEAT") 
+
+wheat_yield_map <- tm_shape(w_ctys) + tm_polygons(col="grey", border.col = "white") +
+  tm_shape(wheat) + 
+    tm_polygons(col="EST_AVE_YIELD_KG", breaks = c(3000,4500,5500,6500,7500,8500), palette = "Oranges", border.col = "white",
+              legend.hist = TRUE, title = "Average Estimated\nWheat Yield\n(kg/hectare)") +
+    tm_legend(outside = TRUE, hist.width = 1.5) +
+    tm_layout(main.title = "D.", main.title.position = c("left"), frame= FALSE, legend.hist.size = 0.5)
+
+wheat_yield_map
+
+# E) alfalfa IP
+alfalfa <- sp_allyrs_fris %>% 
+    filter(CROP == "ALFALFA") 
+
+alfalfa_yield_map <- tm_shape(w_ctys) + tm_polygons(col="grey", border.col = "white") +
+  tm_shape(alfalfa) + 
+      tm_layout(main.title = "E.", main.title.position = c("left"), frame= FALSE, legend.hist.size = 0.5) +
+    tm_polygons(col="EST_AVE_YIELD_KG", breaks = c(5000,7000,8500,10000,12000,15000,29000), palette = "Greens", border.col = "white",
+              legend.hist = TRUE, title = "Average Estimated\nAlfalfa Yield\n(kg/hectare)") +
+    tm_legend(outside = TRUE, hist.width = 1.5) 
+
+alfalfa_yield_map
+
+sifigure2 <- tmap_arrange(cg_yield_map, cs_yield_map,hay_yield_map,wheat_yield_map,alfalfa_yield_map, ncol=2)
+tmap_save(sifigure2, "./viz/SI-Figures/SI-Figure2.jpeg", width = 320, height = 420, units = "mm", dpi = 400)
+```
+
+### SI Figure 3. 
+
+Distribution of (A.) Irrigation Productivity, (B.) Estimated Average Water Applied, and (C.) Estimated Average Yield Across Crops and Through Time
+```{r}
+# see analysis_nomaps_notrends_APPROVED.html for code! Cannot reproduce because this viz was built with grower-level data held securely by the USDA.
+
+```
+
+### SI Figure 4. 
+
+Estimated Average (A.) Yield; and (B.) Water Use Across Crops and Years 
+```{r}
+
+```
+
+### SI Figure 5. 
+
+Map of Primary Irrigation Information Source Across Panel (pooled 2003-2008-2013-2018)
+```{r}
+
+```
+
+### SI Figure 6. 
+
+Pooled Proportion of Irrigation Information Sources Used by Farmers Across Panel in (A.) Arizona, (B.) California, (C.) Colorado, (D.) Idaho, (E.) Montana, (F.) New Mexico, (G.) Nevada, (H.) Oregon, (I.) Utah, (J.) Washington, and (K.) Wyoming  
+```{r}
+
+```
+
+### SI Figure 7. 
+
+Map of Primary Scheduling Method Across Panel (pooled 2003-2008-2013-2018)
+```{r}
+
+```
+
+### SI Figure 8.
+
+Pooled Proportion of Scheduling Methods Used by Farmers Across Panel in (A.) Arizona, (B.) California, (C.) Colorado, (D.) Idaho, (E.) Montana, (F.) New Mexico, (G.) Nevada, (H.) Oregon, (I.) Utah, (J.) Washington, and (K.) Wyoming
+```{r}
+
+```
+
+### SI Figure 9. 
+
+Map of Primary Barriers to Implementing Irrigation Improvements Across Panel (pooled 2003-2008-2013-2018)
+```{r}
+
+```
+
+### SI Figure 10. 
+
+Pooled Proportion of Barriers to Implementing Irrigation Improvements Used by Farmers Across Panel in (A.) Arizona, (B.) California, (C.) Colorado, (D.) Idaho, (E.) Montana, (F.) New Mexico, (G.) Nevada, (H.) Oregon, (I.) Utah, (J.) Washington, and (K.) Wyoming
+```{r}
+
+```
+
+### SI Figure 11. 
+
+Pooled Proportion of Bridges to Implementing Irrigation Improvements Used by Farmers Across Panel in (A.) Arizona, (B.) California, (C.) Colorado, (D.) Idaho, (E.) Montana, (F.) New Mexico, (G.) Nevada, (H.) Oregon, (I.) Utah, (J.) Washington, and (K.) Wyoming
+```{r}
+
+```
+
+### SI Figure 12. 
+
+Proportion of Growers Citing (A.) Barriers to Implementing Improvements, and (B.) Sources of Information, by Assistance Category. Differences in categorization among assistance category across the West according to chi-squared tests are denoted with *** for p ≤ 0.001
+```{r}
+
+```
+
