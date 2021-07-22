@@ -61,7 +61,7 @@ cs <- sp_allyrs_fris %>%
 cs_ip_map <- tm_shape(w_ctys) + tm_polygons(col="grey", border.col = "white") +
   tm_shape(cs) + 
     tm_polygons(col="EST_IP_KG_M", breaks = c(1.5,2.25,2.75,3.25,3.75,4.5,7.25), palette = "Purples", border.col = "white",
-              legend.hist = TRUE, title = "Estimated Average Irrigation\nProductivity in Corn Silage\n(kilograms/cubic meter)") +
+              legend.hist = TRUE, title = "Average Estimated Irrigation\nProductivity in Corn Silage\n(kilograms/cubic meter)") +
     tm_legend(outside = TRUE, hist.width = 1.5) +
     tm_layout(main.title = "B.", main.title.position = c("left"), frame= FALSE, legend.hist.size = 0.5)
 
@@ -74,7 +74,7 @@ cg <- sp_allyrs_fris %>%
 cg_ip_map <- tm_shape(w_ctys) + tm_polygons(col="grey", border.col = "white") +
   tm_shape(cg) + 
     tm_polygons(col="EST_IP_KG_M", breaks = c(0.5,1.25,1.5,1.75,2,2.5,3), palette = "Blues", border.col = "white",
-              legend.hist = TRUE, title = "Estimated Average Irrigation\nProductivity in Corn Grain\n(kilograms/cubic meter)") +
+              legend.hist = TRUE, title = "Average Estimated Irrigation\nProductivity in Corn Grain\n(kilograms/cubic meter)") +
     tm_legend(outside = TRUE, hist.width = 1.5) +
     tm_layout(main.title = "A.", main.title.position = c("left"), frame= FALSE, legend.hist.size = 0.5)
 
@@ -87,7 +87,7 @@ hay <- sp_allyrs_fris %>%
 hay_ip_map <- tm_shape(w_ctys) + tm_polygons(col="grey", border.col = "white") +
   tm_shape(hay) + 
     tm_polygons(col="EST_IP_KG_M", breaks = c(0.25,0.75,1,1.25,1.5,2.25,9.5), palette = "Reds", border.col = "white",
-              legend.hist = TRUE, title = "Estimated Average Irrigation\nProductivity in Hay\n(kilograms/cubic meter)") +
+              legend.hist = TRUE, title = "Average Estimated Irrigation\nProductivity in Hay\n(kilograms/cubic meter)") +
     tm_legend(outside = TRUE, hist.width = 1.5) +
     tm_layout(main.title = "C.", main.title.position = c("left"), frame= FALSE, legend.hist.size = 0.5)
 
@@ -100,7 +100,7 @@ wheat <- sp_allyrs_fris %>%
 wheat_ip_map <- tm_shape(w_ctys) + tm_polygons(col="grey", border.col = "white") +
   tm_shape(wheat) + 
     tm_polygons(col="EST_IP_KG_M", breaks = c(0.25,0.75,1,1.25,1.5,1.75,4), palette = "Oranges", border.col = "white",
-              legend.hist = TRUE, title = "Estimated Average Irrigation\nProductivity in Wheat\n(kilograms/cubic meter)") +
+              legend.hist = TRUE, title = "Average Estimated Irrigation\nProductivity in Wheat\n(kilograms/cubic meter)") +
     tm_legend(outside = TRUE, hist.width = 1.5) +
     tm_layout(main.title = "D.", main.title.position = c("left"), frame= FALSE, legend.hist.size = 0.5)
 
@@ -114,7 +114,7 @@ alfalfa_ip_map <- tm_shape(w_ctys) + tm_polygons(col="grey", border.col = "white
   tm_shape(alfalfa) + 
       tm_layout(main.title = "E.", main.title.position = c("left"), frame= FALSE, legend.hist.size = 0.5) +
     tm_polygons(col="EST_IP_KG_M", breaks = c(0.75,1,1.25,1.5,1.75,2.25,8.5), palette = "Greens", border.col = "white",
-              legend.hist = TRUE, title = "Estimated Average Irrigation\nProductivity in Alfalfa\n(kilograms/cubic meter)") +
+              legend.hist = TRUE, title = "Average Estimated Irrigation\nProductivity in Alfalfa\n(kilograms/cubic meter)") +
     tm_legend(outside = TRUE, hist.width = 1.5) 
 
 alfalfa_ip_map
@@ -201,20 +201,80 @@ tmap_save(sifigure2, "./viz/SI-Figures/SI-Figure2.jpeg", width = 320, height = 4
 Distribution of (A.) Irrigation Productivity, (B.) Estimated Average Water Applied, and (C.) Estimated Average Yield Across Crops and Through Time
 ```{r}
 # see analysis_nomaps_notrends_APPROVED.html for code! Cannot reproduce because this viz was built with grower-level data held securely by the USDA.
-
 ```
 
 ### SI Figure 4. 
 
 Estimated Average (A.) Yield; and (B.) Water Use Across Crops and Years 
 ```{r}
-
+# see analysis_nomaps_notrends_APPROVED.html for code! Cannot reproduce because this viz was built with grower-level data held securely by the USDA.
 ```
 
 ### SI Figure 5. 
 
 Map of Primary Irrigation Information Source Across Panel (pooled 2003-2008-2013-2018)
 ```{r}
+v <- readRDS("./data/info-prop-allyrs.RDS")
+
+# build proportion table above into suitable data format for proportion barchart (ie. long format)
+v <- v %>% select(!c("total")) %>% gather(category, proportion, 4:11) %>%   mutate(
+    category = case_when(
+      category == "K1040" ~ "K1040 - Extension or university",
+      category == "K1041" ~ "K1041 - Private consultants",
+      category == "K1042" ~ "K1042 - Equipment dealers",
+      category == "K1043" ~ "K1043 - Irrigation district",
+      category == "K1044" ~ "K1044 - Government",
+      category == "K1045" ~ "K1045 - Press",
+      category == "K1046" ~ "K1046 - Neighbors",
+      category == "K1047" ~ "K1047 - Internet"
+    )
+  )
+
+
+# Select most important source by proportion for each county
+find <- v %>% group_by(GEOID) %>% filter(proportion == max(proportion))
+
+# %>% mutate(place=1) %>% group_by(category) %>%  summarise(count = sum(place))
+
+find_summary <- find %>% 
+  group_by(category) %>% 
+  summarise(n = n())
+find_summary
+
+
+# rename variables for nicer viz
+find <- find %>% 
+  mutate(
+    category = case_when(
+      category == "K1040 - Extension or university" ~ "Extension or university (57)",
+      category == "K1041 - Private consultants" ~ "Private consultants (18)", 
+      category == "K1042 - Equipment dealers" ~ "Equipment dealers (23)",
+      category == "K1043 - Irrigation district" ~ "Irrigation district (21)",
+      category == "K1044 - Government" ~ "Government (32)",
+      category == "K1045 - Press" ~ "Press (4)",
+      category == "K1046 - Neighbors" ~ "Neighbors (178)",
+      category == "K1047 - Internet" ~ "Internet (4)"
+    )
+  )
+
+
+find$category <- as.factor(find$category)
+find$category <- ordered(find$category, levels = c("Neighbors (178)", "Extension or university (57)", "Government (32)", "Equipment dealers (23)", "Irrigation district (21)", "Private consultants (18)","Internet (4)","Press (4)"))
+
+colnames(find)[4] <- "Information Source"
+
+info_sp <- sp::merge(w_ctys, find, by = "GEOID", duplicateGeoms = TRUE, all = TRUE)
+
+info_map <- tm_shape(w_ctys) + tm_polygons(col="grey", border.col = "white") +
+  tm_shape(info_sp) + 
+    tm_polygons("Information Source", palette = c("#A6761D","#1B9E77","#66A61E","#7570B3", "#E7298A", "#D95F02","#666666","#E6AB02"), border.col = "white")  +
+    tm_legend(outside = TRUE) +
+    tm_layout(frame= FALSE,
+              legend.text.size = 0.65)
+
+info_map
+
+tmap_save(info_map, "./viz/SI-Figures/SI-Figure5.jpeg", width = 150, height = 150, units = "mm", dpi = 400)
 
 ```
 
@@ -222,13 +282,128 @@ Map of Primary Irrigation Information Source Across Panel (pooled 2003-2008-2013
 
 Pooled Proportion of Irrigation Information Sources Used by Farmers Across Panel in (A.) Arizona, (B.) California, (C.) Colorado, (D.) Idaho, (E.) Montana, (F.) New Mexico, (G.) Nevada, (H.) Oregon, (I.) Utah, (J.) Washington, and (K.) Wyoming  
 ```{r}
+information_plots <- function(df, state, title, place) {
+  
+  x <- df %>% 
+    filter(STATE_ALPHA == state) 
+  
+  x <- x %>% 
+  mutate(
+    category = case_when(
+      category == "K1040 - Extension or university" ~ "Extension or university",
+      category == "K1041 - Private consultants" ~ "Private consultants", 
+      category == "K1042 - Equipment dealers" ~ "Equipment dealers",
+      category == "K1043 - Irrigation district" ~ "Irrigation district",
+      category == "K1044 - Government" ~ "Government",
+      category == "K1045 - Press" ~ "Press",
+      category == "K1046 - Neighbors" ~ "Neighbors",
+      category == "K1047 - Internet" ~ "Internet"
+    )
+  )
+  
+  x$category <- as.factor(x$category)
+  x$category <- ordered(x$category, levels = c("Neighbors", "Extension or university", "Government", "Equipment dealers", "Irrigation district", "Private consultants","Internet","Press"))
 
+  information_plot <- ggplot(x, aes(fill=category, y=proportion,x=COUNTY_ALPHA)) +
+    geom_bar(position = "fill", stat = "identity") +
+    scale_fill_manual(values = c("#A6761D","#1B9E77","#66A61E","#7570B3", "#E7298A", "#D95F02","#666666","#E6AB02"), name = "Category") +
+    ggtitle(title) +
+    theme_classic() +
+    xlab("County") +
+    ylab("Proportion") +
+    coord_flip() 
+
+
+  ggsave(place, height = 7, width = 7, dpi=400, units="in", device='jpeg')
+  
+  return(information_plot)
+
+}
+
+information_plots(v, "ARIZONA", "Arizona", "./viz/SI-Figures/SI-Figure6A.jpeg") 
+information_plots(v, "CALIFORNIA", "California", "./viz/SI-Figures/SI-Figure6B.jpeg") 
+information_plots(v, "COLORADO", "Colorado", "./viz/SI-Figures/SI-Figure6C.jpeg")
+information_plots(v, "IDAHO", "Idaho", "./viz/SI-Figures/SI-Figure6D.jpeg")
+information_plots(v, "MONTANA", "Montana", "./viz/SI-Figures/SI-Figure6E.jpeg")
+information_plots(v, "NEW MEXICO", "New Mexico", "./viz/SI-Figures/SI-Figure6F.jpeg")
+information_plots(v, "NEVADA", "Nevada", "./viz/SI-Figures/SI-Figure6G.jpeg") 
+information_plots(v, "OREGON", "Oregon", "./viz/SI-Figures/SI-Figure6H.jpeg")
+information_plots(v, "UTAH", "Utah", "./viz/SI-Figures/SI-Figure6I.jpeg") 
+information_plots(v, "WASHINGTON", "Washington", "./viz/SI-Figures/SI-Figure6J.jpeg")
+information_plots(v, "WYOMING", "Wyoming", "./viz/SI-Figures/SI-Figure6K.jpeg")
 ```
 
 ### SI Figure 7. 
 
 Map of Primary Scheduling Method Across Panel (pooled 2003-2008-2013-2018)
 ```{r}
+v <- readRDS("./data/sched-prop-allyrs.RDS")
+
+# build proportion table above into suitable data format for proportion barchart (ie. long format)
+v <- v %>% select(!c("total")) %>% gather(category, proportion, 4:13) %>% 
+  mutate(
+    category = case_when(
+      category == "K1020" ~ "K1020 - Condition of crop",
+      category == "K1021" ~ "K1021 - Feel of the soil",
+      category == "K1022" ~ "K1022 - Soil moisture sensor",
+      category == "K1023" ~ "K1023 - Plant moisture sensor",
+      category == "K1024" ~ "K1024 - Scheduling service",
+      category == "K1025" ~ "K1025 - Daily crop-water ET",
+      category == "K1026" ~ "K1026 - Water delivered in turn",
+      category == "K1027" ~ "K1027 - Personal calendar",
+      category == "K1028" ~ "K1028 - Computer simulation models",
+      category == "K1029" ~ "K1029 - When neighbors watered"
+    )
+  )
+
+################################################################################################################################################# BUILD MAP OF MOST IMPORTANT SCHEDULING METHOD
+####################################################################################################################
+# Select most important source by proportion for each county
+find <- v %>% group_by(GEOID) %>% filter(proportion == max(proportion))
+
+# how many counties are in each category on the maps?
+find_summary <- find %>% 
+  group_by(category) %>% 
+  summarise(n = n())
+find_summary
+
+# rename variables for nicer viz
+find <- find %>% 
+  mutate(
+    category = case_when(
+      category == "K1020 - Condition of crop" ~ "Condition of crop (324)",
+      category == "K1021 - Feel of the soil" ~ "Feel of the soil (9)",
+      category == "K1022 - Soil moisture sensor" ~ "Soil moisture sensor (1)",
+      category == "K1023 - Plant moisture sensor" ~ "Plant moisture sensor (0)",
+      category == "K1024 - Scheduling service" ~ "Scheduling service (1)",
+      category == "K1025 - Daily crop-water ET" ~ "Daily crop-water ET (0)",
+      category == "K1026 - Water delivered in turn" ~ "Water delivered in turn (26)",
+      category == "K1027 - Personal calendar" ~ "Personal calendar (6)",
+      category == "K1028 - Computer simulation models" ~ "Computer simulation models (0)",
+      category == "K1029 - When neighbors watered" ~ "When neighbors watered (0)"
+    )
+  )
+
+find$category <- ordered(find$category, levels = c("Condition of crop (324)", "Water delivered in turn (26)", "Feel of the soil (9)",  "Personal calendar (6)","Scheduling service (1)","Soil moisture sensor (1)"))
+
+# rename columns for visualizations
+colnames(find)[4] <- "Scheduling Method"
+
+# build spatial using the western_ctys RDS
+sched_sp <- sp::merge(w_ctys, find, by = "GEOID", duplicateGeoms = TRUE, all = TRUE)
+
+
+# build maps
+sched_map <- tm_shape(w_ctys) + tm_polygons(col="grey", border.col = "white") +
+  tm_shape(sched_sp) + 
+    tm_polygons("Scheduling Method", palette = c("#A6CEE3", "#FDBF6F", "#1F78B4", "#FF7F00", "#FB9A99", "#B2DF8A"), border.col = "white")  +
+    tm_legend(outside = TRUE) +
+    tm_layout(frame= FALSE,
+              legend.text.size = 0.65)
+
+sched_map
+
+tmap_save(sched_map, "./viz/SI-Figures/SI-Figure7.jpeg", width = 150, height = 150, units = "mm", dpi = 400)
 
 ```
 
@@ -236,27 +411,248 @@ Map of Primary Scheduling Method Across Panel (pooled 2003-2008-2013-2018)
 
 Pooled Proportion of Scheduling Methods Used by Farmers Across Panel in (A.) Arizona, (B.) California, (C.) Colorado, (D.) Idaho, (E.) Montana, (F.) New Mexico, (G.) Nevada, (H.) Oregon, (I.) Utah, (J.) Washington, and (K.) Wyoming
 ```{r}
+scheduling_plots <- function(df, state, title, place) {
+  
+  x <- df %>% 
+    filter(STATE_ALPHA == state) 
 
+  x <- x %>% 
+  mutate(
+    category = case_when(
+      category == "K1020 - Condition of crop" ~ "Condition of crop",
+      category == "K1021 - Feel of the soil" ~ "Feel of the soil",
+      category == "K1022 - Soil moisture sensor" ~ "Soil moisture sensor",
+      category == "K1023 - Plant moisture sensor" ~ "Plant moisture sensor",
+      category == "K1024 - Scheduling service" ~ "Scheduling service",
+      category == "K1025 - Daily crop-water ET" ~ "Daily crop-water ET",
+      category == "K1026 - Water delivered in turn" ~ "Water delivered in turn",
+      category == "K1027 - Personal calendar" ~ "Personal calendar",
+      category == "K1028 - Computer simulation models" ~ "Computer simulation models",
+      category == "K1029 - When neighbors watered" ~ "When neighbors watered"
+    )
+  )
+
+    x$category <- as.factor(x$category)
+    x$category <- ordered(x$category, levels = c("Condition of crop", "Water delivered in turn", "Feel of the soil",  "Personal calendar","Scheduling service","Soil moisture sensor","Plant moisture sensor","Daily crop-water ET","Computer simulation models","When neighbors watered"))
+
+
+  scheduling_plot <- ggplot(x, aes(fill=category, y=proportion,x=COUNTY_ALPHA)) +
+    geom_bar(position = "fill", stat = "identity") +
+    scale_fill_manual(values = c("#A6CEE3", "#FDBF6F", "#1F78B4", "#FF7F00", "#FB9A99", "#B2DF8A", "#33A02C","#E31A1C","#CAB2D6","#6A3D9A"), name = "Category") +
+    ggtitle(title) +
+    theme_classic() +
+    xlab("County") +
+    ylab("Proportion") +
+    coord_flip() 
+
+
+  ggsave(place, height = 7, width = 7, dpi=300, units="in", device='jpeg')
+  
+  return(scheduling_plot)
+
+}
+
+scheduling_plots(v, "ARIZONA", "Arizona", "./viz/SI-Figures/SI-Figure8A.jpeg") 
+scheduling_plots(v, "CALIFORNIA", "California", "./viz/SI-Figures/SI-Figure8B.jpeg") 
+scheduling_plots(v, "COLORADO", "Colorado", "./viz/SI-Figures/SI-Figure8C.jpeg")
+scheduling_plots(v, "IDAHO", "Idaho", "./viz/SI-Figures/SI-Figure8D.jpeg")
+scheduling_plots(v, "MONTANA", "Montana", "./viz/SI-Figures/SI-Figure8E.jpeg")
+scheduling_plots(v, "NEW MEXICO", "New Mexico", "./viz/SI-Figures/SI-Figure8F.jpeg")
+scheduling_plots(v, "NEVADA", "Nevada", "./viz/SI-Figures/SI-Figure8G.jpeg") 
+scheduling_plots(v, "OREGON", "Oregon", "./viz/SI-Figures/SI-Figure8H.jpeg")
+scheduling_plots(v, "UTAH", "Utah", "./viz/SI-Figures/SI-Figure8I.jpeg") 
+scheduling_plots(v, "WASHINGTON", "Washington", "./viz/SI-Figures/SI-Figure8J.jpeg")
+scheduling_plots(v, "WYOMING", "Wyoming", "./viz/SI-Figures/SI-Figure8K.jpeg")
 ```
 
 ### SI Figure 9. 
 
 Map of Primary Barriers to Implementing Irrigation Improvements Across Panel (pooled 2003-2008-2013-2018)
 ```{r}
+v <- readRDS("./data/barrier-prop-allyrs.RDS")
 
+# build proportion table above into suitable data format for proportion barchart (ie. long format)
+v <- v %>% select(!c("total")) %>% gather(category, proportion, 4:12) %>% 
+  mutate(
+    category = case_when(
+      category == "K1070" ~ "K1070 - Low priority",
+      category == "K1071" ~ "K1071 - Reduced yield or quality",
+      category == "K1072" ~ "K1072 - Physical conditions",
+      category == "K1073" ~ "K1073 - Cost outweighs benefits",
+      category == "K1074" ~ "K1074 - Cannot finance",
+      category == "K1075" ~ "K1075 - No landlord cost-share",
+      category == "K1076" ~ "K1076 - Water uncertainty",
+      category == "K1077" ~ "K1077 - Not farming long-term",
+      category == "K1078" ~ "K1078 - Time and cost increase"
+    )
+  )
+
+# Select most important source by proportion for each county
+find <- v %>% group_by(GEOID) %>% filter(proportion == max(proportion)) 
+
+# Number of counties in each category
+find_summary <- find %>% 
+  group_by(category) %>% 
+  summarise(n = n())
+find_summary
+
+# rename variables for nicer viz
+find <- find %>% 
+  mutate(
+    category = case_when(
+      category == "K1070 - Low priority" ~ "Low priority (98)",
+      category == "K1071 - Reduced yield or quality" ~ "Reduced yield or quality (8)",
+      category == "K1072 - Physical conditions" ~ "Physical conditions (18)",
+      category == "K1073 - Cost outweighs benefits" ~ "Cost outweighs benefits (43)",
+      category == "K1074 - Cannot finance" ~ "Cannot finance (86)",
+      category == "K1075 - No landlord cost-share" ~ "No landlord cost-share (3)",
+      category == "K1076 - Water uncertainty" ~ "Water uncertainty (57)",
+      category == "K1077 - Not farming long-term" ~ "Not farming long-term (11)",
+      category == "K1078 - Time and cost increase" ~ "Time and cost increase (1)"
+    )
+  )
+
+find$category <- ordered(find$category, levels = c("Low priority (98)", "Cannot finance (86)", "Water uncertainty (57)", "Cost outweighs benefits (43)", "Physical conditions (18)","Not farming long-term (11)","Reduced yield or quality (8)","No landlord cost-share (3)","Time and cost increase (1)"))
+
+# Change colnames for visuzaliation
+colnames(find)[4] <- "Barrier to Implementation"
+
+barrier_sp <- sp::merge(w_ctys, find, by = "GEOID", duplicateGeoms = TRUE, all = TRUE)
+
+# Make a map for summarised data across all years
+barrier_map <- tm_shape(w_ctys) + tm_polygons(col="grey", border.col = "white") +
+  tm_shape(barrier_sp) + 
+    tm_polygons("Barrier to Implementation", palette = c("#66C2A5", "#A6D854", "#E5C494", "#E78AC3","#8DA0CB", "#696969", "#FC8D62",  "#FFD92F",   "#2F2F2F"),
+ border.col = "white")  +
+    tm_legend(outside = TRUE) +
+    tm_layout(frame= FALSE,
+              legend.text.size = 0.65)
+
+barrier_map
+
+tmap_save(barrier_map, "./viz/SI-Figures/SI-Figure9.jpeg", width = 150, height = 150, units = "mm", dpi = 400)
+
+palette = c("#66C2A5", "#A6D854", "#E5C494", "#E78AC3","#8DA0CB", "#696969", "#FC8D62",  "#FFD92F",   "#2F2F2F")
 ```
 
 ### SI Figure 10. 
 
 Pooled Proportion of Barriers to Implementing Irrigation Improvements Used by Farmers Across Panel in (A.) Arizona, (B.) California, (C.) Colorado, (D.) Idaho, (E.) Montana, (F.) New Mexico, (G.) Nevada, (H.) Oregon, (I.) Utah, (J.) Washington, and (K.) Wyoming
 ```{r}
+barriers_plots <- function(df, state, title, place) {
+  
+  x <- df %>% 
+    filter(STATE_ALPHA == state) 
 
+  
+  x <- x %>% 
+  mutate(
+    category = case_when(
+      category == "K1070 - Low priority" ~ "Low priority",
+      category == "K1071 - Reduced yield or quality" ~ "Reduced yield or quality",
+      category == "K1072 - Physical conditions" ~ "Physical conditions",
+      category == "K1073 - Cost outweighs benefits" ~ "Cost outweighs benefits",
+      category == "K1074 - Cannot finance" ~ "Cannot finance",
+      category == "K1075 - No landlord cost-share" ~ "No landlord cost-share",
+      category == "K1076 - Water uncertainty" ~ "Water uncertainty",
+      category == "K1077 - Not farming long-term" ~ "Not farming long-term",
+      category == "K1078 - Time and cost increase" ~ "Time and cost increase"
+    )
+  )
+
+      x$category <- as.factor(x$category)
+      x$category <- ordered(x$category, levels = c("Low priority", "Cannot finance", "Water uncertainty", "Cost outweighs benefits", "Physical conditions","Not farming long-term","Reduced yield or quality","No landlord cost-share","Time and cost increase"))
+
+  barriers_plot <- ggplot(x, aes(fill=category, y=proportion,x=COUNTY_ALPHA)) +
+    geom_bar(position = "fill", stat = "identity") +
+    scale_fill_manual(values = c("#66C2A5", "#A6D854", "#E5C494", "#E78AC3","#8DA0CB", "#696969", "#FC8D62",  "#FFD92F",   "#2F2F2F"),name = "Category") +
+    ggtitle(title) +
+    theme_classic() +
+    xlab("County") +
+    ylab("Proportion") +
+    coord_flip() 
+
+
+  ggsave(place, height = 7, width = 7, dpi=300, units="in", device='jpeg')
+  
+  return(barriers_plot)
+
+}
+
+barriers_plots(v, "ARIZONA", "Arizona", "./viz/SI-Figures/SI-Figure10A.jpeg") 
+barriers_plots(v, "CALIFORNIA", "California", "./viz/SI-Figures/SI-Figure10B.jpeg") 
+barriers_plots(v, "COLORADO", "Colorado", "./viz/SI-Figures/SI-Figure10C.jpeg")
+barriers_plots(v, "IDAHO", "Idaho", "./viz/SI-Figures/SI-Figure10D.jpeg")
+barriers_plots(v, "MONTANA", "Montana", "./viz/SI-Figures/SI-Figure10E.jpeg")
+barriers_plots(v, "NEW MEXICO", "New Mexico", "./viz/SI-Figures/SI-Figure10F.jpeg")
+barriers_plots(v, "NEVADA", "Nevada", "./viz/SI-Figures/SI-Figure10G.jpeg") 
+barriers_plots(v, "OREGON", "Oregon", "./viz/SI-Figures/SI-Figure10H.jpeg")
+barriers_plots(v, "UTAH", "Utah", "./viz/SI-Figures/SI-Figure10I.jpeg") 
+barriers_plots(v, "WASHINGTON", "Washington", "./viz/SI-Figures/SI-Figure10J.jpeg")
+barriers_plots(v, "WYOMING", "Wyoming", "./viz/SI-Figures/SI-Figure10K.jpeg")
 ```
 
 ### SI Figure 11. 
 
 Pooled Proportion of Bridges to Implementing Irrigation Improvements Used by Farmers Across Panel in (A.) Arizona, (B.) California, (C.) Colorado, (D.) Idaho, (E.) Montana, (F.) New Mexico, (G.) Nevada, (H.) Oregon, (I.) Utah, (J.) Washington, and (K.) Wyoming
 ```{r}
+v <- readRDS("./data/assist-prop-allyrs.RDS")
+################################################################################################################################################# BUILD FACETTED PROPORTIONAL BAR CHARTS
+####################################################################################################################
+# build proportion table above into suitable data format for proportion barchart (ie. long format)
+v <- v %>% select(!c("total")) %>% gather(category, proportion, 4:13) 
+
+assistance_plots <- function(df, state, title, place) {
+  
+  x <- df %>% 
+    filter(STATE_ALPHA == state) 
+
+  x <- x %>% 
+  mutate(
+    category = case_when(
+      category == "K215" ~ "USDA conservation*",
+      category == "K216" ~ "USDA conservation",
+      category == "K217" ~ "USDA stewardship*",
+      category == "K218" ~ "USDA stewardship",
+      category == "K219" ~ "Non-USDA programs*",
+      category == "K235" ~ "Non-USDA programs",
+      category == "K236" ~ "Local water programs*",
+      category == "K237" ~ "Local water programs",
+      category == "K238" ~ "Private lenders*",
+      category == "K239" ~ "Private lenders"
+    )
+  )
+
+    x$category <- as.factor(x$category)
+    x$category <- ordered(x$category, levels = c("USDA conservation", "USDA conservation*", "Local water programs*", "Local water programs",  "Private lenders*","Private lenders","Non-USDA programs","USDA stewardship","USDA stewardship*","Non-USDA programs*"))
+
+  information_plot <- ggplot(x, aes(fill=category, y=proportion,x=COUNTY_ALPHA)) +
+    geom_bar(position = "fill", stat = "identity") +
+    scale_fill_manual(values = c("#332288","#88CCEE","#44AA99","#117733","#AA4499","#882255","#6468AD","#CE792A","#DDCC77","#C8BFEC"), name = "Category") +
+    ggtitle(title) +
+    theme_classic() +
+    xlab("County") +
+    ylab("Proportion") +
+    coord_flip() 
+
+
+  ggsave(place, height = 7, width = 7, dpi=300, units="in", device='jpeg')
+  
+  return(information_plot)
+
+}
+
+assistance_plots(v, "ARIZONA", "Arizona", "./viz/SI-Figures/SI-Figure11A.jpeg") 
+assistance_plots(v, "CALIFORNIA", "California", "./viz/SI-Figures/SI-Figure11B.jpeg") 
+assistance_plots(v, "COLORADO", "Colorado", "./viz/SI-Figures/SI-Figure11C.jpeg")
+assistance_plots(v, "IDAHO", "Idaho", "./viz/SI-Figures/SI-Figure11D.jpeg")
+assistance_plots(v, "MONTANA", "Montana", "./viz/SI-Figures/SI-Figure11E.jpeg")
+assistance_plots(v, "NEW MEXICO", "New Mexico", "./viz/SI-Figures/SI-Figure11F.jpeg")
+assistance_plots(v, "NEVADA", "Nevada", "./viz/SI-Figures/SI-Figure11G.jpeg") 
+assistance_plots(v, "OREGON", "Oregon", "./viz/SI-Figures/SI-Figure11H.jpeg")
+assistance_plots(v, "UTAH", "Utah", "./viz/SI-Figures/SI-Figure11I.jpeg") 
+assistance_plots(v, "WASHINGTON", "Washington", "./viz/SI-Figures/SI-Figure11J.jpeg")
+assistance_plots(v, "WYOMING", "Wyoming", "./viz/SI-Figures/SI-Figure11K.jpeg")
 
 ```
 
@@ -264,6 +660,68 @@ Pooled Proportion of Bridges to Implementing Irrigation Improvements Used by Far
 
 Proportion of Growers Citing (A.) Barriers to Implementing Improvements, and (B.) Sources of Information, by Assistance Category. Differences in categorization among assistance category across the West according to chi-squared tests are denoted with *** for p ≤ 0.001
 ```{r}
+# barriers
+bar_assist <- read.csv("./data/bar-assist-chisq.csv")
 
+bar_assist$category <- as.character(bar_assist$category)
+
+  bar_assist <- bar_assist %>% 
+  mutate(
+    category = case_when(
+      category == "K1070" ~ "Low priority",
+      category == "K1071" ~ "Reduced yield or quality",
+      category == "K1072" ~ "Physical conditions",
+      category == "K1073" ~ "Cost outweighs benefits",
+      category == "K1074" ~ "Cannot finance",
+      category == "K1075" ~ "No landlord cost-share",
+      category == "K1076" ~ "Water uncertainty",
+      category == "K1077" ~ "Not farming long-term",
+      category == "K1078" ~ "Time and cost increase"
+    )
+  )
+
+  barrier_plot <- ggplot(bar_assist, aes(fill=category, y=proportion, x=assistance)) +
+    geom_bar(position = "fill", stat = "identity") +
+    scale_fill_manual(values = c("#66C2A5", "#FC8D62", "#8DA0CB", "#E78AC3", "#A6D854", "#FFD92F", "#E5C494", "#696969", "#2F2F2F"), name = "Barriers") +
+    theme_classic() +
+    xlab("Sought Assistance for Improvements") +
+    ylab("Proportion of Growers") +
+    annotate("text", x = 1.5, y = 1.05, label = "***", size = 4) 
+
+  barrier_plot
+  
+#ggsave("./viz/bar_chisq.png", plot = barrier_plot, height = 7, width = 4, dpi=300, units="in", device='png')
+  
+# information
+info_assist <- read.csv("./data/info-assist-chisq.csv")
+colnames(info_assist)[1] <- "assistance"
+info_assist$category <- as.character(info_assist$category)
+
+  info_assist <- info_assist %>% 
+  mutate(
+    category = case_when(
+      category == "K1040" ~ "Extension or university",
+      category == "K1041" ~ "Private consultants", 
+      category == "K1042" ~ "Equipment dealers",
+      category == "K1043" ~ "Irrigation district",
+      category == "K1044" ~ "Government",
+      category == "K1045" ~ "Press",
+      category == "K1046" ~ "Neighbors",
+      category == "K1047" ~ "Internet"
+    )
+  )
+
+  information_plot <- ggplot(info_assist, aes(fill=category, y=proportion, x=assistance)) +
+    geom_bar(position = "fill", stat = "identity") +
+    scale_fill_brewer(palette = "Dark2", name = "Information Sources") +
+    theme_classic() +
+    xlab("Sought Assistance for Improvements") +
+    ylab("Proportion of Growers") +
+    annotate("text", x = 1.5, y = 1.05, label = "***", size = 4) 
+  
+  information_plot
+  
+ggarrange(barrier_plot, information_plot, ncol = 2, labels = c('A.', 'B.'))
+ggsave("./viz/SI-Figures/SI-Figure12.jpeg", height = 7, width = 9, dpi=400, units="in", device='jpeg')
 ```
 
