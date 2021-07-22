@@ -1,7 +1,7 @@
 ---
 title: "irrigation-productivity-trends"
 author: "Britta Schumacher"
-date: "5/24/2021"
+date: "Last updated: `r format(Sys.time(), '%d %B, %Y')`"
 output: 
   html_document:
     theme: flatly
