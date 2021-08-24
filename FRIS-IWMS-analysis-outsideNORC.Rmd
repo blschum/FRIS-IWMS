@@ -298,15 +298,18 @@ x2 <- fris_sp_indyrs %>%
 
 y <- merge(x, x2, by = c("GEOID", "CROP")) # to find differences, use code within function, below
 
-  x <- y %>% 
-    filter(CROP == "ALFALFA") %>% 
+# 2013 - 2018 (- = less water applied in 2013, + = more water applied in 2013)
+diff_drought <- y %>% 
+    #filter(CROP == "ALFALFA") %>% 
     mutate(yield_diff_LBS = (EST_AVE_YIELD_LBS.y - EST_AVE_YIELD_LBS.x), # yield (pounds/acre)
            yield_diff_KG = (EST_AVE_YIELD_KG.y - EST_AVE_YIELD_KG.x), # yield (kg/hectare)
            wa_diff_AF = (EST_AVE_WU_AF.y - EST_AVE_WU_AF.x),    # water applied (acre feet/acre)
            wa_diff_M = (EST_AVE_WU_M.y - EST_AVE_WU_M.x), # water applied (cubic meter/hectare)
            ip_diff_LBSAF = (EST_IP_LBS_AF.y - EST_IP_LBS_AF.x), # irrigation productivity (pounds / AF)
-           ip_diff_KGM = (EST_IP_KG_M.y - EST_IP_KG_M.x)) # irrigation productivity (kg / cubic meter)
+           ip_diff_KGM = (EST_IP_KG_M.y - EST_IP_KG_M.x)) %>% # irrigation productivity (kg / cubic meter)
+    select(GEOID,CROP,yield_diff_KG,wa_diff_M,ip_diff_KGM)
 
+  
 # build spatial
 sp_diff <- sp::merge(ctys, y, by = "GEOID", duplicateGeoms = TRUE, all = TRUE)
 

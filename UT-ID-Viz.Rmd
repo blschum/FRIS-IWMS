@@ -1,0 +1,673 @@
+---
+title: "FRIS-IWMS Manuscript Visualizations, by Figure #"
+author: "Britta Schumacher"
+date: "Last updated: `r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  html_document:
+    theme: flatly
+    toc: yes
+    toc_float: true
+    code_folding: hide
+---
+
+```{r setup, include = FALSE, cache = FALSE}
+
+knitr::opts_chunk$set(
+  warning = FALSE,
+  message = FALSE
+)
+
+```
+
+
+### Set up
+
+Load relevant packages & common data
+```{r}
+library(ggplot2)
+library(sp)
+library(tidyverse)
+library(tmap)
+library(RColorBrewer)
+library(rgeos)
+library(spdplyr)
+library(viridis)
+library(rgdal)
+library(rgeos)
+library(ggpubr)
+
+ctys <- readRDS("./data/county.RDS")
+w_ctys <- readRDS("./data/western_ctys.RDS")
+
+# build spatial for idaho and utah
+UI <- w_ctys %>% 
+  filter(STATEFP == 16 | STATEFP == 49) %>% 
+  select(GEOID, STATEFP, COUNTYFP)
+UI$STATE_ABBR[UI$STATEFP == 16] = "ID"
+UI$STATE_ABBR[UI$STATEFP == 49] = "UT"
+
+# read in state file
+state <- readRDS("./data/states.RDS")
+```
+
+### Figure 1. 
+
+Percent of a county’s agricultural lands irrigated in 2018. Data: USDA NASS Survey.
+```{r}
+# build irrigation in 2018
+irr <- readRDS("./data/full_merged_irrigation.RDS")
+i18 <- irr %>% dplyr::select(GEOID,YEAR,AG_ACRES, IRR_ACRES, PERC_IRR, SOURCE) %>% filter(YEAR == 2018) %>%  filter(SOURCE == "NASS")
+
+i18 <- i18[complete.cases(i18), ]
+i18_sp <- merge(ctys, i18, by = "GEOID")
+
+map <- tm_shape(i18_sp) +
+  tm_polygons(col = "PERC_IRR", breaks = c(0.0,0.2,0.50,1.0,2.50,10.0,25.0,50.0,75.0,100.0), palette = "Blues", border.col = "transparent", title = "") +
+  tm_legend(outside = TRUE) +
+  tm_layout(frame = FALSE) +
+    tm_shape(state) +
+  tm_borders(col = "black") + 
+      tm_layout(main.title = "Percent of a county’s agricultural lands irrigated in 2018", main.title.position = c("left"), frame= FALSE, legend.hist.size = 0.5)
+
+map
+
+tmap_save(map, file = paste0('./viz/extension/Figure1.jpeg'), width = 220, height = 120, units = "mm", dpi = 400)
+```
+
+### Figure 2. 
+
+Estimated Average Irrigation Productivity in 2018 in A) Alfalfa and B) Hay. Note, irrigation productivity, or the water used per crop unit harvested, is calculated by dividing the estimated average yield (in kilograms/hectare) by the estimated average water used (in cubic meters/hectare) in any county-year.
+```{r}
+# Build spatial across crops using the _indyrs datasets (summarizes across individual years)
+fris_sp_indyrs <- readRDS("./data/sumstat_indyrs.RDS")
+cty_names <- readRDS("./data/cty_names.RDS")
+
+sumstat_indyrs_df <- merge(cty_names, fris_sp_indyrs)
+x <- sumstat_indyrs_df %>% filter(YEAR == 2018)
+
+sp_indyrs_fris <- sp::merge(UI, fris_sp_indyrs, by = "GEOID", duplicateGeoms = TRUE, all = TRUE)
+
+# A) alfalfa IP
+alfalfa <- sp_indyrs_fris %>% 
+    filter(CROP == "ALFALFA") %>% 
+    filter(YEAR == 2018)
+
+alfalfa_ip_map <- tm_shape(UI) + tm_polygons(col="grey", border.col = "white") +
+  tm_shape(alfalfa) + 
+    tm_polygons(col="EST_IP_KG_M", breaks = c(0.75,1.25,1.5,1.75,2.25,2.75,6.0), palette = "Greens", border.col = "white",
+              legend.hist = TRUE, title = "") +
+    tm_legend(outside = TRUE, hist.width = 1.5) +
+    tm_layout(main.title = "A. Alfalfa", main.title.position = c("left"), frame= FALSE, legend.hist.size = 0.5)
+
+alfalfa_ip_map
+
+# B) wheat IP
+wheat <- sp_indyrs_fris %>% 
+    filter(CROP == "WHEAT") %>% 
+    filter(YEAR == 2018) 
+
+wheat_ip_map <- tm_shape(UI) + tm_polygons(col="grey", border.col = "white") +
+  tm_shape(wheat) + 
+    tm_polygons(col="EST_IP_KG_M", breaks = c(0.25,0.75,1,1.25,1.5,1.75,4), palette = "Oranges", border.col = "white",
+              legend.hist = TRUE, title = "") +
+    tm_legend(outside = TRUE, hist.width = 1.5) +
+    tm_layout(main.title = "B. Wheat", main.title.position = c("left"), frame= FALSE, legend.hist.size = 0.5)
+
+wheat_ip_map
+
+# C) corn silage IP
+cs <- sp_indyrs_fris %>% 
+    filter(CROP == "CORN_SILAGE") %>% 
+    filter(YEAR == 2018) 
+
+cs_ip_map <- tm_shape(UI) + tm_polygons(col="grey", border.col = "white") +
+  tm_shape(cs) + 
+    tm_polygons(col="EST_IP_KG_M", breaks = c(1.5,2.25,2.75,3.25,3.75,4.5,7.25), palette = "Purples", border.col = "white",
+              legend.hist = TRUE, title = "") +
+    tm_legend(outside = TRUE, hist.width = 1.5) +
+    tm_layout(main.title = "C. Corn Silage", main.title.position = c("left"), frame= FALSE, legend.hist.size = 0.5)
+
+cs_ip_map
+
+# D) corn grain IP
+cg <- sp_indyrs_fris %>% 
+    filter(CROP == "CORN_GRAIN") %>% 
+    filter(YEAR == 2018)
+
+cg_ip_map <- tm_shape(UI) + tm_polygons(col="grey", border.col = "white") +
+  tm_shape(cg) + 
+    tm_polygons(col="EST_IP_KG_M", breaks = c(0.5,1.25,1.5,1.75,2,2.5,3), palette = "Blues", border.col = "white",
+              legend.hist = TRUE, title = "") +
+    tm_legend(outside = TRUE, hist.width = 1.5) +
+    tm_layout(main.title = "D. Corn Grain", main.title.position = c("left"), frame= FALSE, legend.hist.size = 0.5)
+
+cg_ip_map
+
+figure2 <- tmap_arrange(alfalfa_ip_map, wheat_ip_map, cs_ip_map, cg_ip_map)
+tmap_save(figure2, "./viz/extension/Figure2.jpeg", width = 300, height = 120, units = "mm", dpi = 400)
+```
+
+### Figure 3. 
+
+Estimated Average Irrigation Productivity across all years in A) Alfalfa and B) Hay. Note, irrigation productivity, or the water used per crop unit harvested, is calculated by dividing the estimated average yield (in kilograms/hectare) by the estimated average water used (in cubic meters/hectare) in any county-year.
+```{r}
+# Build spatial across crops using the _indyrs datasets (summarizes across individual years)
+fris_sp_allyrs <- readRDS("./data/sumstat_allyrs.RDS")
+cty_names <- readRDS("./data/cty_names.RDS")
+
+sumstat_allyrs_df <- merge(cty_names, fris_sp_allyrs)
+
+sp_allyrs_fris <- sp::merge(UI, fris_sp_allyrs, by = "GEOID", duplicateGeoms = TRUE, all = TRUE)
+
+# A) alfalfa IP
+alfalfa <- sp_allyrs_fris %>% 
+    filter(CROP == "ALFALFA")
+
+alfalfa_ip_map <- tm_shape(UI) + tm_polygons(col="grey", border.col = "white") +
+  tm_shape(alfalfa) + 
+    tm_polygons(col="EST_IP_LBS_AF", breaks = c(2250,3250,3750,4500,5000,5500,7000), palette = "Greens", border.col = "white",
+              legend.hist = TRUE, title = "") +
+    tm_legend(outside = TRUE, hist.width = 2) +
+    tm_layout(main.title = "A. Alfalfa", main.title.position = c("left"), frame= FALSE, legend.hist.size = 1)
+
+alfalfa_ip_map
+
+# B) wheat IP
+wheat <- sp_allyrs_fris %>% 
+    filter(CROP == "WHEAT") 
+
+wheat_ip_map <- tm_shape(UI) + tm_polygons(col="grey", border.col = "white") +
+  tm_shape(wheat) + 
+    tm_polygons(col="EST_IP_LBS_AF", breaks = c(2500,3250,3500,4000,4250,4500,5000), palette = "Oranges", border.col = "white",
+              legend.hist = TRUE, title = "") +
+    tm_legend(outside = TRUE, hist.width = 2) +
+    tm_layout(main.title = "B. Wheat", main.title.position = c("left"), frame= FALSE, legend.hist.size = 1)
+
+wheat_ip_map
+
+# C) corn silage IP
+cs <- sp_allyrs_fris %>% 
+    filter(CROP == "CORN_SILAGE") 
+
+cs_ip_map <- tm_shape(UI) + tm_polygons(col="grey", border.col = "white") +
+  tm_shape(cs) + 
+    tm_polygons(col="EST_IP_LBS_AF", breaks = c(4500,6250,7250,8250,9250,10000,11500), palette = "Purples", border.col = "white",
+              legend.hist = TRUE, title = "") +
+    tm_legend(outside = TRUE, hist.width = 2) +
+    tm_layout(main.title = "C. Corn Silage", main.title.position = c("left"), frame= FALSE, legend.hist.size = 1)
+
+cs_ip_map
+
+# D) corn grain IP
+cg <- sp_allyrs_fris %>% 
+    filter(CROP == "CORN_GRAIN") 
+
+cg_ip_map <- tm_shape(UI) + tm_polygons(col="grey", border.col = "white") +
+  tm_shape(cg) + 
+    tm_polygons(col="EST_IP_LBS_AF", breaks = c(2750,3500,3750,4250,4750,5250,6000), palette = "Blues", border.col = "white",
+              legend.hist = TRUE, title = "") +
+    tm_legend(outside = TRUE, hist.width = 2) +
+    tm_layout(main.title = "D. Corn Grain", main.title.position = c("left"), frame= FALSE, legend.hist.size = 1)
+
+cg_ip_map
+
+figure3 <- tmap_arrange(alfalfa_ip_map, wheat_ip_map, cs_ip_map, cg_ip_map, nrow = 2)
+tmap_save(figure3, "./viz/extension/Figure3.jpeg", width = 280, height = 300, units = "mm", dpi = 400)
+```
+
+### Figure 4
+
+Average Estimated Yield in (A.) Corn Grain, (B.) Corn Silage, (C.) Other Hay, (D.) Wheat, and (E.) Alfalfa Over Study Period
+```{r}
+# A) corn silage yield
+cs <- sp_allyrs_fris %>% 
+    filter(CROP == "CORN_SILAGE") 
+
+cs_yield_map <- tm_shape(UI) + tm_polygons(col="grey", border.col = "white") +
+  tm_shape(cs) + 
+    tm_polygons(col="EST_AVE_YIELD_LBS", style = "quantile", n = 6, palette = "Purples", border.col = "white",
+              legend.hist = TRUE, title = "") +
+    tm_legend(outside = TRUE, hist.width = 1.5) +
+    tm_layout(main.title = "C. Corn Silage", main.title.position = c("left"), frame= FALSE, legend.hist.size = 0.5)
+
+cs_yield_map
+
+# B) corn grain IP
+cg <- sp_allyrs_fris %>% 
+    filter(CROP == "CORN_GRAIN") 
+
+cg_yield_map <- tm_shape(UI) + tm_polygons(col="grey", border.col = "white") +
+  tm_shape(cg) + 
+    tm_polygons(col="EST_AVE_YIELD_LBS", style = "quantile", n = 6, palette = "Blues", border.col = "white",
+              legend.hist = TRUE, title = "") +
+    tm_legend(outside = TRUE, hist.width = 1.5) +
+    tm_layout(main.title = "D. Corn Grain", main.title.position = c("left"), frame= FALSE, legend.hist.size = 0.5)
+
+cg_yield_map
+
+
+# D) wheat IP
+wheat <- sp_allyrs_fris %>% 
+    filter(CROP == "WHEAT") 
+
+wheat_yield_map <- tm_shape(UI) + tm_polygons(col="grey", border.col = "white") +
+  tm_shape(wheat) + 
+    tm_polygons(col="EST_AVE_YIELD_LBS", style = "quantile", n = 6, palette = "Oranges", border.col = "white",
+              legend.hist = TRUE, title = "") +
+    tm_legend(outside = TRUE, hist.width = 1.5) +
+    tm_layout(main.title = "B. Wheat", main.title.position = c("left"), frame= FALSE, legend.hist.size = 0.5)
+
+wheat_yield_map
+
+# E) alfalfa IP
+alfalfa <- sp_allyrs_fris %>% 
+    filter(CROP == "ALFALFA") 
+
+alfalfa_yield_map <- tm_shape(UI) + tm_polygons(col="grey", border.col = "white") +
+  tm_shape(alfalfa) + 
+      tm_layout(main.title = "A. Alfalfa", main.title.position = c("left"), frame= FALSE, legend.hist.size = 0.5) +
+    tm_polygons(col="EST_AVE_YIELD_LBS", style = "quantile", n = 6, palette = "Greens", border.col = "white",
+              legend.hist = TRUE, title = "") +
+    tm_legend(outside = TRUE, hist.width = 1.5) 
+
+alfalfa_yield_map
+
+figure4 <- tmap_arrange(alfalfa_yield_map,wheat_yield_map,cs_yield_map,cg_yield_map)
+tmap_save(figure4, "./viz/extension/Figure4.jpeg", width = 300, height = 120, units = "mm", dpi = 400)
+```
+
+
+### Figure 5. 
+
+Change in Water Application Rates in Alfalfa Between 2013 & 2018.
+```{r}
+# n >= 10 observations/cty-yr
+x <- fris_sp_indyrs %>% 
+  filter(YEAR == 2018) %>% 
+  select(!YEAR)
+
+x2 <- fris_sp_indyrs %>% 
+  filter(YEAR == 2013) %>% 
+  select(!YEAR)
+
+y <- merge(x, x2, by = c("GEOID", "CROP")) # to find differences, use code within function, below
+
+  x <- y %>% 
+    filter(CROP == "ALFALFA") %>% 
+    mutate(yield_diff_LBS = (EST_AVE_YIELD_LBS.y - EST_AVE_YIELD_LBS.x), # yield (pounds/acre)
+           yield_diff_KG = (EST_AVE_YIELD_KG.y - EST_AVE_YIELD_KG.x), # yield (kg/hectare)
+           wa_diff_AF = (EST_AVE_WU_AF.y - EST_AVE_WU_AF.x),    # water applied (acre feet/acre)
+           wa_diff_M = (EST_AVE_WU_M.y - EST_AVE_WU_M.x), # water applied (cubic meter/hectare)
+           ip_diff_LBSAF = (EST_IP_LBS_AF.y - EST_IP_LBS_AF.x), # irrigation productivity (pounds / AF)
+           ip_diff_KGM = (EST_IP_KG_M.y - EST_IP_KG_M.x)) # irrigation productivity (kg / cubic meter)
+
+# build spatial
+sp_diff <- sp::merge(UI, y, by = "GEOID", duplicateGeoms = TRUE, all = TRUE)
+
+alfalfa_wu <- sp_diff %>% 
+    filter(CROP == "ALFALFA") %>% 
+    mutate(wa_diff_M = (EST_AVE_WU_M.y - EST_AVE_WU_M.x)) # water applied (cubic meter/hectare)
+
+figure5 <- tm_shape(UI) + tm_polygons(col="grey", border.col = "white") +
+  tm_shape(alfalfa_wu) + 
+    tm_polygons(col= "wa_diff_M", breaks = c(-5000,-2500,-1500,-500,0,1000,2000,4000), palette = c("#B2182B", "#D6604D", "#F4A582", "#FDDBC7", "#D1E5F0", "#92C5DE", "#4393C3"), border.col = "white", legend.hist = TRUE, title = "Difference in Water\nApplied in Alfalfa\n(cubic meters/hectare)") +
+    tm_legend(outside = TRUE, hist.width = 1.5) +
+    tm_layout(frame= FALSE, legend.hist.size = 0.5)
+
+figure5
+
+tmap_save(figure5, "./viz/extension/Figure5.jpeg", width = 100, height = 120, units = "mm", dpi = 400)
+  
+```
+
+### Figure 6. 
+
+A) Map of primary irrigation information source reported in 2018; number of counties citing each source in parentheses (e.g., in 2018, 82 counties cited neighbors as their primary irrigation source). Note, primary use across correlates was not self-identified by growers but built by the method identified in section 2.3 (code, github.com/###/FRIS-IWMS/clean-NORC-approved-data.Rmd); B) Map of Primary Irrigation Information Source Across Panel (pooled 2003-2008-2013-2018)
+```{r}
+w <- readRDS("./data/info-prop-indyrs.RDS")
+
+w <- w %>% filter(YEAR == 2018) %>% select(!c("total")) %>% gather(category, proportion, 5:12) %>%   mutate(
+    category = case_when(
+      category == "K1040" ~ "Extension or university",
+      category == "K1041" ~ "Private consultants",
+      category == "K1042" ~ "Equipment dealers",
+      category == "K1043" ~ "Irrigation district",
+      category == "K1044" ~ "Government",
+      category == "K1045" ~ "Press",
+      category == "K1046" ~ "Neighbors",
+      category == "K1047" ~ "Internet"
+    )
+  )
+
+# Select most important source by proportion for each county
+find_18 <- w %>% group_by(GEOID) %>% filter(proportion == max(proportion)) 
+
+# %>% mutate(place=1) %>% group_by(category) %>%  summarise(count = sum(place))
+find_summary18 <- find_18 %>% 
+  group_by(category) %>% 
+  summarise(n = n())
+find_summary18
+
+find_18$category <- as.factor(find_18$category)
+find_18$category <- ordered(find_18$category, levels = c("Neighbors", "Extension or university", "Private consultants", "Equipment dealers", "Irrigation district","Government","Internet","Press"))
+
+colnames(find_18)[5] <- "Information Source"
+
+info_sp18 <- sp::merge(UI, find_18, by = "GEOID", duplicateGeoms = TRUE, all = TRUE)
+
+info_map18 <- tm_shape(UI) + tm_polygons(col="grey", border.col = "white") +
+  tm_shape(info_sp18) + 
+    tm_polygons("Information Source", palette = c("#A6761D","#1B9E77","#D95F02","#7570B3", "#E7298A", "#66A61E","#666666","#E6AB02"), border.col = "white")  +
+    tm_legend(outside = TRUE) +
+    tm_layout(frame= FALSE,
+              legend.text.size = 0.65) + 
+      tm_layout(main.title = "A. Primary Information\nSource in 2018", main.title.position = c("left"), frame= FALSE, legend.hist.size = 0.5) 
+
+info_map18
+
+v <- readRDS("./data/info-prop-allyrs.RDS")
+
+# build proportion table above into suitable data format for proportion barchart (ie. long format)
+v <- v %>% select(!c("total")) %>% gather(category, proportion, 4:11) %>%   mutate(
+    category = case_when(
+      category == "K1040" ~ "Extension or university",
+      category == "K1041" ~ "Private consultants",
+      category == "K1042" ~ "Equipment dealers",
+      category == "K1043" ~ "Irrigation district",
+      category == "K1044" ~ "Government",
+      category == "K1045" ~ "Press",
+      category == "K1046" ~ "Neighbors",
+      category == "K1047" ~ "Internet"
+    )
+  )
+
+
+# Select most important source by proportion for each county
+find <- v %>% group_by(GEOID) %>% filter(proportion == max(proportion))
+
+# %>% mutate(place=1) %>% group_by(category) %>%  summarise(count = sum(place))
+
+find_summary <- find %>% 
+  group_by(category) %>% 
+  summarise(n = n())
+find_summary
+
+find$category <- as.factor(find$category)
+find$category <- ordered(find$category, levels = c("Neighbors", "Extension or university", "Government", "Equipment dealers", "Irrigation district", "Private consultants","Internet","Press"))
+
+colnames(find)[4] <- "Information Source"
+
+info_sp <- sp::merge(UI, find, by = "GEOID", duplicateGeoms = TRUE, all = TRUE)
+
+info_map <- tm_shape(UI) + tm_polygons(col="grey", border.col = "white") +
+  tm_shape(info_sp) + 
+    tm_polygons("Information Source", palette = c("#A6761D","#1B9E77","#66A61E","#7570B3", "#E7298A", "#D95F02","#666666","#E6AB02"), border.col = "white")  +
+    tm_legend(outside = TRUE) +
+    tm_layout(frame= FALSE,
+              legend.text.size = 0.65) + 
+      tm_layout(main.title = "B. Primary Information\nSource Across Panel", main.title.position = c("left"), frame= FALSE, legend.hist.size = 0.5)
+
+info_map
+
+figure6 <- tmap_arrange(info_map18, info_map)
+tmap_save(figure6, "./viz/extension/Figure6.png", width = 200, height = 120, units = "mm", dpi = 400)
+```
+
+### Figure 7. 
+
+A) Map of primary irrigation scheduling method reported in 2018; number of counties citing each method in parentheses. Note, no county reported use of plant moisture sensors, daily crop-water evapo-transpiration reports, or computer simulation models as their primary scheduling method in 2018.
+```{r}
+w <- readRDS("./data/sched-prop-indyrs.RDS")
+
+w <- w %>% filter(YEAR == 2018) %>% select(!c("total")) %>% gather(category, proportion, 5:14) %>% 
+  mutate(
+    category = case_when(
+      category == "K1020" ~ "Condition of crop",
+      category == "K1021" ~ "Feel of the soil",
+      category == "K1022" ~ "Soil moisture sensor",
+      category == "K1023" ~ "Plant moisture sensor",
+      category == "K1024" ~ "Scheduling service",
+      category == "K1025" ~ "Daily crop-water ET",
+      category == "K1026" ~ "Water delivered in turn",
+      category == "K1027" ~ "Personal calendar",
+      category == "K1028" ~ "Computer simulation models",
+      category == "K1029" ~ "When neighbors watered"
+    )
+  )
+
+# Select most important source by proportion for each county
+find_18 <- w %>% group_by(GEOID) %>% filter(proportion == max(proportion))
+
+# how many counties are in each category on the maps?
+find_summary18 <- find_18 %>% 
+  group_by(category) %>% 
+  summarise(n = n())
+find_summary18
+
+find_18$category <- ordered(find_18$category, levels = c("Condition of crop", "Water delivered in turn", "Feel of the soil", "Scheduling service", "Personal calendar","Soil moisture sensor","When neighbors watered"))
+
+# rename columns for visualizations
+colnames(find_18)[5] <- "Scheduling Method"
+
+sched18_sp <- sp::merge(UI, find_18, by = "GEOID", duplicateGeoms = TRUE, all = TRUE)
+
+# build maps
+sched18_map <- tm_shape(UI) + tm_polygons(col="grey", border.col = "white") +
+  tm_shape(sched18_sp) + 
+    tm_polygons("Scheduling Method", palette = c("#A6CEE3", "#FDBF6F", "#1F78B4", "#FB9A99", "#FF7F00", "#B2DF8A", "#6A3D9A"), border.col = "white")  +
+    tm_legend(outside = TRUE) +
+    tm_layout(frame= FALSE,
+              legend.text.size = 0.65) + 
+      tm_layout(main.title = "A. Primary Scheduling\nMethod in 2018", main.title.position = c("left"), frame= FALSE, legend.hist.size = 0.5)
+
+sched18_map
+
+v <- readRDS("./data/sched-prop-allyrs.RDS")
+
+# build proportion table above into suitable data format for proportion barchart (ie. long format)
+v <- v %>% select(!c("total")) %>% gather(category, proportion, 4:13) %>% 
+  mutate(
+    category = case_when(
+      category == "K1020" ~ "Condition of crop",
+      category == "K1021" ~ "Feel of the soil",
+      category == "K1022" ~ "Soil moisture sensor",
+      category == "K1023" ~ "Plant moisture sensor",
+      category == "K1024" ~ "Scheduling service",
+      category == "K1025" ~ "Daily crop-water ET",
+      category == "K1026" ~ "Water delivered in turn",
+      category == "K1027" ~ "Personal calendar",
+      category == "K1028" ~ "Computer simulation models",
+      category == "K1029" ~ "When neighbors watered"
+    )
+  )
+
+# Select most important source by proportion for each county
+find <- v %>% group_by(GEOID) %>% filter(proportion == max(proportion))
+
+# how many counties are in each category on the maps?
+find_summary <- find %>% 
+  group_by(category) %>% 
+  summarise(n = n())
+find_summary
+
+find$category <- ordered(find$category, levels = c("Condition of crop", "Water delivered in turn", "Feel of the soil",  "Personal calendar","Scheduling service","Soil moisture sensor"))
+
+# rename columns for visualizations
+colnames(find)[4] <- "Scheduling Method"
+
+# build spatial using the western_ctys RDS
+sched_sp <- sp::merge(UI, find, by = "GEOID", duplicateGeoms = TRUE, all = TRUE)
+
+
+# build maps
+sched_map <- tm_shape(UI) + tm_polygons(col="grey", border.col = "white") +
+  tm_shape(sched_sp) + 
+    tm_polygons("Scheduling Method", palette = c("#A6CEE3", "#FDBF6F", "#1F78B4", "#FF7F00", "#FB9A99", "#B2DF8A"), border.col = "white")  +
+    tm_legend(outside = TRUE) +
+    tm_layout(frame= FALSE,
+              legend.text.size = 0.65) + 
+      tm_layout(main.title = "B. Primary Scheduling\nMethod Across Panel", main.title.position = c("left"), frame= FALSE, legend.hist.size = 0.5)
+
+sched_map
+
+figure7 <- tmap_arrange(sched18_map, sched_map)
+
+tmap_save(figure7, "./viz/extension/Figure7.png", width = 200, height = 120, units = "mm", dpi = 400)
+```
+
+### Figure 8. 
+
+Map of primary barriers to implementing irrigation improvements reported in 2018; number of counties citing each source in parentheses.
+```{r}
+w <- readRDS("./data/barrier-prop-indyrs.RDS")
+
+w <- w %>% filter(YEAR == 2018) %>% select(!c("total")) %>% gather(category, proportion, 5:13) %>% 
+  mutate(
+    category = case_when(
+      category == "K1070" ~ "Low priority",
+      category == "K1071" ~ "Reduced yield or quality",
+      category == "K1072" ~ "Physical conditions",
+      category == "K1073" ~ "Cost outweighs benefits",
+      category == "K1074" ~ "Cannot finance",
+      category == "K1075" ~ "No landlord cost-share",
+      category == "K1076" ~ "Water uncertainty",
+      category == "K1077" ~ "Not farming long-term",
+      category == "K1078" ~ "Time and cost increase"
+    )
+  )
+
+# Select most important source by proportion for each county
+find_18 <- w %>% group_by(GEOID) %>% filter(proportion == max(proportion))
+
+# Number of counties in each category
+find18_summary <- find_18 %>% 
+  group_by(category) %>% 
+  summarise(n = n())
+find18_summary
+
+find_18$category <- ordered(find_18$category, levels = c("Low priority", "Cannot finance", "Water uncertainty", "Cost outweighs benefits", "Physical conditions","Reduced yield or quality","Not farming long-term","Time and cost increase","No landlord cost-share"))
+
+# Change colnames for visuzaliation
+colnames(find_18)[5] <- "Barrier to Implementation"
+
+barrier18_sp <- sp::merge(UI, find_18, by = "GEOID", duplicateGeoms = TRUE, all = TRUE)
+
+# Make a map for just 2018
+barrier18_map <- tm_shape(UI) + tm_polygons(col="grey", border.col = "white") +
+  tm_shape(barrier18_sp) + 
+    tm_polygons("Barrier to Implementation", palette = c("#66C2A5", "#A6D854", "#E5C494","#E78AC3", "#8DA0CB", "#FC8D62", "#696969", "#2F2F2F","#FFD92F"), border.col = "white")  +
+    tm_legend(outside = TRUE) +
+    tm_layout(frame= FALSE,
+              legend.text.size = 0.65) + 
+      tm_layout(main.title = "A. Primary Barrier to\nImprovements in 2018", main.title.position = c("left"), frame= FALSE, legend.hist.size = 0.5)
+
+barrier18_map
+
+v <- readRDS("./data/barrier-prop-allyrs.RDS")
+
+# build proportion table above into suitable data format for proportion barchart (ie. long format)
+v <- v %>% select(!c("total")) %>% gather(category, proportion, 4:12) %>% 
+  mutate(
+    category = case_when(
+      category == "K1070" ~ "Low priority",
+      category == "K1071" ~ "Reduced yield or quality",
+      category == "K1072" ~ "Physical conditions",
+      category == "K1073" ~ "Cost outweighs benefits",
+      category == "K1074" ~ "Cannot finance",
+      category == "K1075" ~ "No landlord cost-share",
+      category == "K1076" ~ "Water uncertainty",
+      category == "K1077" ~ "Not farming long-term",
+      category == "K1078" ~ "Time and cost increase"
+    )
+  )
+
+# Select most important source by proportion for each county
+find <- v %>% group_by(GEOID) %>% filter(proportion == max(proportion)) 
+
+# Number of counties in each category
+find_summary <- find %>% 
+  group_by(category) %>% 
+  summarise(n = n())
+find_summary
+
+
+find$category <- ordered(find$category, levels = c("Low priority", "Cannot finance", "Water uncertainty", "Cost outweighs benefits", "Physical conditions","Not farming long-term","Reduced yield or quality","No landlord cost-share","Time and cost increase"))
+
+# Change colnames for visuzaliation
+colnames(find)[4] <- "Barrier to Implementation"
+
+barrier_sp <- sp::merge(UI, find, by = "GEOID", duplicateGeoms = TRUE, all = TRUE)
+
+# Make a map for summarised data across all years
+barrier_map <- tm_shape(UI) + tm_polygons(col="grey", border.col = "white") +
+  tm_shape(barrier_sp) + 
+    tm_polygons("Barrier to Implementation", palette = c("#66C2A5", "#A6D854", "#E5C494", "#E78AC3","#8DA0CB", "#696969", "#FC8D62",  "#FFD92F",   "#2F2F2F"),
+ border.col = "white")  +
+    tm_legend(outside = TRUE) +
+    tm_layout(frame= FALSE,
+              legend.text.size = 0.65) + 
+      tm_layout(main.title = "B. Primary Barrier to\nImprovements Across Panel", main.title.position = c("left"), frame= FALSE, legend.hist.size = 0.5)
+
+barrier_map
+
+
+figure8 <- tmap_arrange(barrier18_map, barrier_map)
+
+tmap_save(figure8, "./viz/extension/Figure8.png", width = 200, height = 120, units = "mm", dpi = 400)
+```
+
+### Figure 9. 
+
+Map of primary sources of financial and technical assistance reported across FRIS-IWMS years; technical assistance denoted with an *. Note, bridges to irrigation improvements were only recorded by farmers that indicated they had made irrigation and/or drainage improvements above regular maintenance in the past five years and had received any technical or financial assistance for these improvements.
+```{r}
+v <- readRDS("./data/assist-prop-allyrs.RDS")
+################################################################################################################################################# BUILD FACETTED PROPORTIONAL BAR CHARTS
+####################################################################################################################
+# build proportion table above into suitable data format for proportion barchart (ie. long format)
+v <- v %>% select(!c("total")) %>% gather(category, proportion, 4:13) %>% 
+  mutate(
+    category = case_when(
+      category == "K215" ~ "USDA conservation*",
+      category == "K216" ~ "USDA conservation",
+      category == "K217" ~ "USDA stewardship*",
+      category == "K218" ~ "USDA stewardship",
+      category == "K219" ~ "Non-USDA programs*",
+      category == "K235" ~ "Non-USDA programs",
+      category == "K236" ~ "Local water programs*",
+      category == "K237" ~ "Local water programs",
+      category == "K238" ~ "Private lenders*",
+      category == "K239" ~ "Private lenders"
+    )
+  )
+
+# Select most important source by proportion for each county
+find <- v %>% group_by(GEOID) %>% filter(proportion == max(proportion)) 
+# %>% mutate(place=1) %>% group_by(category) %>%  summarise(count = sum(place))
+
+find_summary <- find %>% 
+  group_by(category) %>% 
+  summarise(n = n())
+find_summary
+
+
+find$category <- as.factor(find$category)
+find$category <- ordered(find$category, levels = c("USDA conservation", "USDA conservation*", "Local water programs*", "Local water programs",  "Private lenders*","Private lenders","Non-USDA programs","USDA stewardship","USDA stewardship*","Non-USDA programs*"))
+
+colnames(find)[4] <- "Type of Assistance"
+
+assist_sp <- sp::merge(UI, find, by = "GEOID", duplicateGeoms = TRUE, all = TRUE)
+
+library(tmap)
+assist_map <- tm_shape(UI) + tm_polygons(col="grey", border.col = "white") +
+  tm_shape(assist_sp) + 
+    tm_polygons("Type of Assistance", palette = c("#332288","#88CCEE","#44AA99","#117733","#AA4499","#882255","#6468AD","#CE792A","#DDCC77","#C8BFEC"), border.col = "white")  +
+    tm_legend(outside = TRUE) +
+    tm_layout(frame= FALSE,
+              legend.text.size = 0.65) + 
+      tm_layout(main.title = "A. Primary Source of\nAssistance Across Panel", main.title.position = c("left"), frame= FALSE, legend.hist.size = 0.5)
+
+assist_map
+
+tmap_save(assist_map, "./viz/extension/Figure9.png", width = 100, height = 150, units = "mm", dpi = 400)
+```
+
